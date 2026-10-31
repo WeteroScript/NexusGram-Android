@@ -13,11 +13,26 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 180
 
     steps:
       - name: Checkout upload parts
         uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            unzip \
+            rsync \
+            ninja-build \
+            golang-go \
+            yasm \
+            nasm \
+            python3 \
+            build-essential \
+            pkg-config
 
       - name: Reassemble source archive
         run: |
@@ -26,13 +41,20 @@ jobs:
           cat nexusgram.part* > nexusgram-source.zip
           unzip -q nexusgram-source.zip
           rsync -a --exclude='.git/' Telegram-master/ ./
+
           test -f settings.gradle
+          test -f TMessagesProj/jni/build_ffmpeg_clang.sh
+          test -f TMessagesProj/jni/build_libvpx_clang.sh
+          test -f TMessagesProj/jni/patch_ffmpeg.sh
+          test -f TMessagesProj/jni/patch_boringssl.sh
+          test -f TMessagesProj/jni/build_boringssl.sh
 
           mkdir -p TMessagesProj_Modules
 
           git clone --depth 1 https://github.com/Arseny271/media.git TMessagesProj_Modules/media
           git -C TMessagesProj_Modules/media fetch --depth 1 origin 09b6c97c0d691c50cd4541e1573995d4066d6f5c
           git -C TMessagesProj_Modules/media checkout 09b6c97c0d691c50cd4541e1573995d4066d6f5c
+
           test -f TMessagesProj_Modules/media/core_settings.gradle
 
           mkdir -p TMessagesProj/lib
@@ -40,6 +62,7 @@ jobs:
           git clone --depth 1 https://github.com/dkaraush/jlatexmath-android.git TMessagesProj/lib/jlatexmath
           git -C TMessagesProj/lib/jlatexmath fetch --depth 1 origin 919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
           git -C TMessagesProj/lib/jlatexmath checkout 919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
+
           test -f TMessagesProj/lib/jlatexmath/jlatexmath/build.gradle
 
           mkdir -p TMessagesProj/jni/third_party
@@ -52,61 +75,23 @@ jobs:
           git clone --depth 1 https://github.com/xiph/opus.git TMessagesProj/jni/third_party/xiph/opus
           git clone --depth 1 https://github.com/xiph/opusfile.git TMessagesProj/jni/third_party/xiph/opusfile
 
+          git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git TMessagesProj/jni/third_party/ffmpeg
+          git clone --depth 1 https://github.com/webmproject/libvpx.git TMessagesProj/jni/third_party/libvpx
+          git clone --depth 1 https://github.com/videolan/dav1d.git TMessagesProj/jni/third_party/dav1d
+
           git clone --depth 1 https://github.com/google/boringssl.git TMessagesProj/jni/third_party/boringssl
 
           git clone --depth 1 https://github.com/TelegramMessenger/tgcalls.git TMessagesProj/jni/tgcalls
 
-          test -f TMessagesProj/jni/third_party/libyuv/CMakeLists.txt
-          test -f TMessagesProj/jni/third_party/absl/CMakeLists.txt
-          test -f TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
+          test -f TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
+          test -f TMessagesProj/jni/third_party/libvpx/CMakeLists.txt
+          test -f TMessagesProj/jni/third_party/dav1d/CMakeLists.txt
+          test -f TMessagesProj/jni/third_party/absl/absl/base/nullability.h
           test -f TMessagesProj/jni/third_party/boringssl/include/openssl/aes.h
-          test -f TMessagesProj/jni/third_party/boringssl/include/openssl/rand.h
+          test -f TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
+
           test -f TMessagesProj/jni/tgcalls/tgcalls/AudioDeviceHelper.cpp
           test -f TMessagesProj/jni/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
-
-          grep -Eq 'using[[:space:]]+Nonnull[[:space:]]*=' TMessagesProj/jni/third_party/absl/absl/base/nullability.h
-
-          python3 - <<'PY'
-          from pathlib import Path
-
-          include = '#include "absl/base/nullability.h"'
-
-          targets = [
-              Path("TMessagesProj/jni/voip/webrtc/api/environment/environment.h"),
-              Path("TMessagesProj/jni/voip/webrtc/api/task_queue/pending_task_safety_flag.h"),
-              Path("TMessagesProj/jni/voip/webrtc/modules/audio_processing/include/audio_processing.h"),
-          ]
-
-          for path in targets:
-              if not path.is_file():
-                  raise SystemExit(f"Required WebRTC header missing: {path}")
-
-              source = path.read_text(encoding="utf-8")
-
-              if include not in source:
-                  lines = source.splitlines()
-
-                  guard_index = next(
-                      (i for i, line in enumerate(lines) if line.startswith("#define ")),
-                      None
-                  )
-
-                  if guard_index is None:
-                      raise SystemExit(f"Header guard not found: {path}")
-
-                  lines.insert(guard_index + 1, "")
-                  lines.insert(guard_index + 2, include)
-
-                  path.write_text(
-                      "\n".join(lines) + "\n",
-                      encoding="utf-8"
-                  )
-
-              if include not in path.read_text(encoding="utf-8"):
-                  raise SystemExit(f"Abseil nullability include missing: {path}")
-
-              print(f"Verified: {path}")
-          PY
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -127,6 +112,39 @@ jobs:
             "build-tools;36.0.0" \
             "ndk;27.2.12479018" \
             "cmake;3.22.1"
+
+      - name: Build native dependencies
+        working-directory: TMessagesProj/jni
+        run: |
+          set -e
+
+          export NDK="$ANDROID_HOME/ndk/27.2.12479018"
+          export NINJA_PATH="$(command -v ninja)"
+          export PATH="$ANDROID_HOME/cmake/3.22.1/bin:$PATH"
+
+          test -d "$NDK"
+          test -x "$NINJA_PATH"
+
+          chmod +x \
+            build_libvpx_clang.sh \
+            build_ffmpeg_clang.sh \
+            patch_ffmpeg.sh \
+            patch_boringssl.sh \
+            build_boringssl.sh
+
+          ./build_libvpx_clang.sh
+          ./build_ffmpeg_clang.sh
+          ./patch_ffmpeg.sh
+          ./patch_boringssl.sh
+          ./build_boringssl.sh
+
+      - name: Verify FFmpeg headers
+        run: |
+          set -e
+
+          test -f TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
+          test -f TMessagesProj/jni/third_party/ffmpeg/libavformat/avformat.h
+          test -f TMessagesProj/jni/third_party/ffmpeg/libavcodec/avcodec.h
 
       - name: Build APK
         run: |
