@@ -35,69 +35,159 @@ jobs:
             pkg-config
 
       - name: Reassemble source archive
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          cat nexusgram.part* > nexusgram-source.zip
+          shopt -s nullglob
+          parts=(nexusgram.part*)
+
+          if [[ ${#parts[@]} -eq 0 ]]; then
+            echo "::error::No nexusgram.part* archive files found"
+            exit 1
+          fi
+
+          cat "${parts[@]}" > nexusgram-source.zip
           unzip -q nexusgram-source.zip
+
+          if [[ ! -d Telegram-master ]]; then
+            echo "::error::Telegram-master directory is missing"
+            find . -maxdepth 3 -type d | head -100
+            exit 1
+          fi
+
           rsync -a --exclude='.git/' Telegram-master/ ./
 
-          test -f settings.gradle
-          test -f TMessagesProj/jni/build_ffmpeg_clang.sh
-          test -f TMessagesProj/jni/build_libvpx_clang.sh
-          test -f TMessagesProj/jni/patch_ffmpeg.sh
-          test -f TMessagesProj/jni/patch_boringssl.sh
-          test -f TMessagesProj/jni/build_boringssl.sh
+          if [[ ! -f settings.gradle ]]; then
+            echo "::error::settings.gradle is missing"
+            exit 1
+          fi
+
+          required_scripts=(
+            TMessagesProj/jni/build_ffmpeg_clang.sh
+            TMessagesProj/jni/build_libvpx_clang.sh
+            TMessagesProj/jni/patch_ffmpeg.sh
+            TMessagesProj/jni/patch_boringssl.sh
+            TMessagesProj/jni/build_boringssl.sh
+          )
+
+          for file in "${required_scripts[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Missing build script: $file"
+              find TMessagesProj/jni -maxdepth 4 -type f -name '*.sh' | sort
+              exit 1
+            fi
+          done
 
           mkdir -p TMessagesProj_Modules
-
-          git clone --depth 1 https://github.com/Arseny271/media.git TMessagesProj_Modules/media
-          git -C TMessagesProj_Modules/media fetch --depth 1 origin 09b6c97c0d691c50cd4541e1573995d4066d6f5c
-          git -C TMessagesProj_Modules/media checkout 09b6c97c0d691c50cd4541e1573995d4066d6f5c
-
-          test -f TMessagesProj_Modules/media/core_settings.gradle
-
           mkdir -p TMessagesProj/lib
-
-          git clone --depth 1 https://github.com/dkaraush/jlatexmath-android.git TMessagesProj/lib/jlatexmath
-          git -C TMessagesProj/lib/jlatexmath fetch --depth 1 origin 919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
-          git -C TMessagesProj/lib/jlatexmath checkout 919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
-
-          test -f TMessagesProj/lib/jlatexmath/jlatexmath/build.gradle
-
           mkdir -p TMessagesProj/jni/third_party
+          mkdir -p TMessagesProj/jni/third_party/xiph
 
-          git clone --depth 1 https://chromium.googlesource.com/libyuv/libyuv TMessagesProj/jni/third_party/libyuv
+          git clone --depth 1 \
+            https://github.com/Arseny271/media.git \
+            TMessagesProj_Modules/media
 
-          git clone --depth 1 --branch 20250127.1 https://github.com/abseil/abseil-cpp.git TMessagesProj/jni/third_party/absl
+          git -C TMessagesProj_Modules/media fetch --depth 1 origin \
+            09b6c97c0d691c50cd4541e1573995d4066d6f5c
 
-          git clone --depth 1 https://github.com/xiph/ogg.git TMessagesProj/jni/third_party/xiph/ogg
-          git clone --depth 1 https://github.com/xiph/opus.git TMessagesProj/jni/third_party/xiph/opus
-          git clone --depth 1 https://github.com/xiph/opusfile.git TMessagesProj/jni/third_party/xiph/opusfile
+          git -C TMessagesProj_Modules/media checkout \
+            09b6c97c0d691c50cd4541e1573995d4066d6f5c
 
-          git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git TMessagesProj/jni/third_party/ffmpeg
-          git clone --depth 1 https://github.com/webmproject/libvpx.git TMessagesProj/jni/third_party/libvpx
-          git clone --depth 1 https://github.com/videolan/dav1d.git TMessagesProj/jni/third_party/dav1d
+          git clone --depth 1 \
+            https://github.com/dkaraush/jlatexmath-android.git \
+            TMessagesProj/lib/jlatexmath
 
-          git clone --depth 1 https://github.com/google/boringssl.git TMessagesProj/jni/third_party/boringssl
+          git -C TMessagesProj/lib/jlatexmath fetch --depth 1 origin \
+            919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
 
-          git clone --depth 1 https://github.com/TelegramMessenger/tgcalls.git TMessagesProj/jni/tgcalls
+          git -C TMessagesProj/lib/jlatexmath checkout \
+            919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
 
-          test -f TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
-          test -f TMessagesProj/jni/third_party/libvpx/CMakeLists.txt
-          test -f TMessagesProj/jni/third_party/dav1d/CMakeLists.txt
-          test -f TMessagesProj/jni/third_party/absl/absl/base/nullability.h
-          test -f TMessagesProj/jni/third_party/boringssl/include/openssl/aes.h
-          test -f TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
+          git clone --depth 1 \
+            https://chromium.googlesource.com/libyuv/libyuv \
+            TMessagesProj/jni/third_party/libyuv
 
-          test -f TMessagesProj/jni/tgcalls/tgcalls/AudioDeviceHelper.cpp
-          test -f TMessagesProj/jni/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
+          git clone --depth 1 --branch 20250127.1 \
+            https://github.com/abseil/abseil-cpp.git \
+            TMessagesProj/jni/third_party/absl
+
+          git clone --depth 1 \
+            https://github.com/xiph/ogg.git \
+            TMessagesProj/jni/third_party/xiph/ogg
+
+          git clone --depth 1 \
+            https://github.com/xiph/opus.git \
+            TMessagesProj/jni/third_party/xiph/opus
+
+          git clone --depth 1 \
+            https://github.com/xiph/opusfile.git \
+            TMessagesProj/jni/third_party/xiph/opusfile
+
+          git clone --depth 1 \
+            https://github.com/FFmpeg/FFmpeg.git \
+            TMessagesProj/jni/third_party/ffmpeg
+
+          git clone --depth 1 \
+            https://github.com/webmproject/libvpx.git \
+            TMessagesProj/jni/third_party/libvpx
+
+          git clone --depth 1 \
+            https://github.com/videolan/dav1d.git \
+            TMessagesProj/jni/third_party/dav1d
+
+          git clone --depth 1 \
+            https://github.com/google/boringssl.git \
+            TMessagesProj/jni/third_party/boringssl
+
+          git clone --depth 1 \
+            https://github.com/TelegramMessenger/tgcalls.git \
+            TMessagesProj/jni/tgcalls
+
+          echo "=== Checking required dependency files ==="
+
+          required_files=(
+            TMessagesProj_Modules/media/core_settings.gradle
+            TMessagesProj/lib/jlatexmath/jlatexmath/build.gradle
+            TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
+            TMessagesProj/jni/third_party/libvpx/CMakeLists.txt
+            TMessagesProj/jni/third_party/dav1d/CMakeLists.txt
+            TMessagesProj/jni/third_party/absl/absl/base/nullability.h
+            TMessagesProj/jni/third_party/boringssl/include/openssl/aes.h
+            TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
+            TMessagesProj/jni/tgcalls/tgcalls/AudioDeviceHelper.cpp
+            TMessagesProj/jni/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
+          )
+
+          missing=0
+
+          for file in "${required_files[@]}"; do
+            if [[ -f "$file" ]]; then
+              echo "[OK] $file"
+            else
+              echo "::error::Missing dependency file: $file"
+              missing=1
+            fi
+          done
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "=== tgcalls files ==="
+            find TMessagesProj/jni/tgcalls -maxdepth 6 -type f | head -200 || true
+
+            echo "=== third_party files ==="
+            find TMessagesProj/jni/third_party -maxdepth 5 -type f | head -200 || true
+
+            exit 1
+          fi
+
+          echo "All dependency checks passed."
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -115,15 +205,18 @@ jobs:
 
       - name: Build native dependencies
         working-directory: TMessagesProj/jni
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           export NDK="$ANDROID_HOME/ndk/27.2.12479018"
           export NINJA_PATH="$(command -v ninja)"
           export PATH="$ANDROID_HOME/cmake/3.22.1/bin:$PATH"
 
-          test -d "$NDK"
-          test -x "$NINJA_PATH"
+          if [[ ! -d "$NDK" ]]; then
+            echo "::error::Android NDK not found: $NDK"
+            exit 1
+          fi
 
           chmod +x \
             build_libvpx_clang.sh \
@@ -139,17 +232,35 @@ jobs:
           ./build_boringssl.sh
 
       - name: Verify FFmpeg headers
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          test -f TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
-          test -f TMessagesProj/jni/third_party/ffmpeg/libavformat/avformat.h
-          test -f TMessagesProj/jni/third_party/ffmpeg/libavcodec/avcodec.h
+          headers=(
+            TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
+            TMessagesProj/jni/third_party/ffmpeg/libavformat/avformat.h
+            TMessagesProj/jni/third_party/ffmpeg/libavcodec/avcodec.h
+          )
+
+          for file in "${headers[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Missing FFmpeg header: $file"
+              exit 1
+            fi
+            echo "[OK] $file"
+          done
 
       - name: Build APK
+        shell: bash
         run: |
+          set -euo pipefail
+
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatRelease
+
+          ./gradlew \
+            --no-daemon \
+            --stacktrace \
+            :TMessagesProj_App:assembleAfatRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
