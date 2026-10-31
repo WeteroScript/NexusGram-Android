@@ -13,37 +13,48 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 360
+    env:
+      ANDROID_NDK_VERSION: "27.2.12479018"
+      ANDROID_API: "21"
+      BUILD_JOBS: "2"
+      RUST_TOOLCHAIN: 1.96.1
 
     steps:
-      - name: Checkout upload parts
+      - name: Checkout NexusGram archive parts
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Install host build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git \
-            unzip \
-            rsync \
-            ninja-build \
-            golang-go \
-            yasm \
-            nasm \
-            python3 \
             build-essential \
-            pkg-config
+            clang \
+            cmake \
+            git \
+            golang-go \
+            libclang-dev \
+            libtool-bin \
+            meson \
+            nasm \
+            ninja-build \
+            perl \
+            pkg-config \
+            python3 \
+            rsync \
+            unzip \
+            yasm
 
-      - name: Reassemble source archive
+      - name: Reassemble NexusGram source archive
         shell: bash
         run: |
-          set -euo pipefail
-
+          set -Eeuo pipefail
           shopt -s nullglob
           parts=(nexusgram.part*)
 
-          if [[ ${#parts[@]} -eq 0 ]]; then
-            echo "::error::No nexusgram.part* archive files found"
+          if (( ${#parts[@]} != 9 )); then
+            echo "::error::Expected 9 archive parts, found ${#parts[@]}"
+            printf 'Found: %s\n' "${parts[@]}"
             exit 1
           fi
 
@@ -51,136 +62,41 @@ jobs:
           unzip -q nexusgram-source.zip
 
           if [[ ! -d Telegram-master ]]; then
-            echo "::error::Telegram-master directory is missing"
-            find . -maxdepth 3 -type d | head -100
+            echo "::error::Telegram-master directory was not found after extraction"
+            find . -maxdepth 3 -type d | sort | head -120
             exit 1
           fi
 
           rsync -a --exclude='.git/' Telegram-master/ ./
 
-          if [[ ! -f settings.gradle ]]; then
-            echo "::error::settings.gradle is missing"
-            exit 1
-          fi
-
-          required_scripts=(
-            TMessagesProj/jni/build_ffmpeg_clang.sh
-            TMessagesProj/jni/build_libvpx_clang.sh
-            TMessagesProj/jni/patch_ffmpeg.sh
-            TMessagesProj/jni/patch_boringssl.sh
-            TMessagesProj/jni/build_boringssl.sh
-          )
-
-          for file in "${required_scripts[@]}"; do
-            if [[ ! -f "$file" ]]; then
-              echo "::error::Missing build script: $file"
-              find TMessagesProj/jni -maxdepth 4 -type f -name '*.sh' | sort
-              exit 1
-            fi
-          done
-
-          mkdir -p TMessagesProj_Modules
-          mkdir -p TMessagesProj/lib
-          mkdir -p TMessagesProj/jni/third_party
-          mkdir -p TMessagesProj/jni/third_party/xiph
-
-          git clone --depth 1 \
-            https://github.com/Arseny271/media.git \
-            TMessagesProj_Modules/media
-
-          git -C TMessagesProj_Modules/media fetch --depth 1 origin \
-            09b6c97c0d691c50cd4541e1573995d4066d6f5c
-
-          git -C TMessagesProj_Modules/media checkout \
-            09b6c97c0d691c50cd4541e1573995d4066d6f5c
-
-          git clone --depth 1 \
-            https://github.com/dkaraush/jlatexmath-android.git \
-            TMessagesProj/lib/jlatexmath
-
-          git -C TMessagesProj/lib/jlatexmath fetch --depth 1 origin \
-            919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
-
-          git -C TMessagesProj/lib/jlatexmath checkout \
-            919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
-
-          git clone --depth 1 \
-            https://chromium.googlesource.com/libyuv/libyuv \
-            TMessagesProj/jni/third_party/libyuv
-
-          git clone --depth 1 --branch 20250127.1 \
-            https://github.com/abseil/abseil-cpp.git \
-            TMessagesProj/jni/third_party/absl
-
-          git clone --depth 1 \
-            https://github.com/xiph/ogg.git \
-            TMessagesProj/jni/third_party/xiph/ogg
-
-          git clone --depth 1 \
-            https://github.com/xiph/opus.git \
-            TMessagesProj/jni/third_party/xiph/opus
-
-          git clone --depth 1 \
-            https://github.com/xiph/opusfile.git \
-            TMessagesProj/jni/third_party/xiph/opusfile
-
-          git clone --depth 1 \
-            https://github.com/FFmpeg/FFmpeg.git \
-            TMessagesProj/jni/third_party/ffmpeg
-
-          git clone --depth 1 \
-            https://github.com/webmproject/libvpx.git \
-            TMessagesProj/jni/third_party/libvpx
-
-          git clone --depth 1 \
-            https://github.com/videolan/dav1d.git \
-            TMessagesProj/jni/third_party/dav1d
-
-          git clone --depth 1 \
-            https://github.com/google/boringssl.git \
-            TMessagesProj/jni/third_party/boringssl
-
-          git clone --depth 1 \
-            https://github.com/TelegramMessenger/tgcalls.git \
-            TMessagesProj/jni/tgcalls
-
-          echo "=== Checking required dependency files ==="
-
           required_files=(
-            TMessagesProj_Modules/media/core_settings.gradle
-            TMessagesProj/lib/jlatexmath/jlatexmath/build.gradle
-            TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
-            TMessagesProj/jni/third_party/libvpx/CMakeLists.txt
-            TMessagesProj/jni/third_party/dav1d/CMakeLists.txt
-            TMessagesProj/jni/third_party/absl/absl/base/nullability.h
-            TMessagesProj/jni/third_party/boringssl/include/openssl/aes.h
-            TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
-            TMessagesProj/jni/tgcalls/tgcalls/AudioDeviceHelper.cpp
-            TMessagesProj/jni/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
+            settings.gradle
+            gradlew
+            TMessagesProj/jni/CMakeLists.txt
+            TMessagesProj/jni/prebuild/build_all.sh
+            TMessagesProj/jni/prebuild/common.sh
+            TMessagesProj/jni/prebuild/build_boringssl.sh
+            TMessagesProj/jni/prebuild/build_openh264.sh
+            TMessagesProj/jni/prebuild/build_opus.sh
+            TMessagesProj/jni/prebuild/build_libvpx.sh
+            TMessagesProj/jni/prebuild/build_dav1d.sh
+            TMessagesProj/jni/prebuild/build_ffmpeg.sh
+            TMessagesProj/jni/prebuild/build_tlottie.sh
+            TMessagesProj/jni/prebuild/build_wallet_engine.sh
+            TMessagesProj/jni/prebuild/build_tdlib.sh
+            TMessagesProj/jni/prebuild/build_wamr.sh
+            TMessagesProj/jni/prebuild/build_prisma.sh
+            TMessagesProj/jni/gram-wallet/Cargo.toml
+            TMessagesProj/jni/prisma/CMakeLists.txt
           )
-
-          missing=0
 
           for file in "${required_files[@]}"; do
-            if [[ -f "$file" ]]; then
-              echo "[OK] $file"
-            else
-              echo "::error::Missing dependency file: $file"
-              missing=1
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Required source file is missing: $file"
+              exit 1
             fi
+            echo "[OK] $file"
           done
-
-          if [[ "$missing" -ne 0 ]]; then
-            echo "=== tgcalls files ==="
-            find TMessagesProj/jni/tgcalls -maxdepth 6 -type f | head -200 || true
-
-            echo "=== third_party files ==="
-            find TMessagesProj/jni/third_party -maxdepth 5 -type f | head -200 || true
-
-            exit 1
-          fi
-
-          echo "All dependency checks passed."
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -194,75 +110,209 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      - name: Install Android SDK components
+      - name: Install Android SDK, NDK and CMake
+        shell: bash
         run: |
+          set -Eeuo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install \
             "platform-tools" \
             "platforms;android-36" \
             "build-tools;36.0.0" \
-            "ndk;27.2.12479018" \
+            "ndk;${ANDROID_NDK_VERSION}" \
             "cmake;3.22.1"
 
-      - name: Build native dependencies
+          test -f "$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake"
+          test -x "$ANDROID_HOME/cmake/3.22.1/bin/cmake"
+
+      - name: Install Rust toolchain and Android targets
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN}"
+          export PATH="$HOME/.cargo/bin:$PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+          rustup target add --toolchain "${RUST_TOOLCHAIN}" \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            i686-linux-android \
+            x86_64-linux-android
+
+          rustc +"${RUST_TOOLCHAIN}" --version
+          cargo +"${RUST_TOOLCHAIN}" --version
+          rustup target list --toolchain "${RUST_TOOLCHAIN}" --installed
+
+      - name: Fetch pinned Telegram submodule sources
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          clone_at() {
+            local url="$1"
+            local revision="$2"
+            local destination="$3"
+
+            echo "==> ${destination} @ ${revision}"
+            rm -rf "$destination"
+            mkdir -p "$(dirname "$destination")"
+            git init --quiet "$destination"
+            git -C "$destination" remote add origin "$url"
+            git -C "$destination" fetch --quiet --no-tags --depth=1 origin "$revision"
+            git -C "$destination" checkout --quiet --detach FETCH_HEAD
+          }
+
+          # Gradle submodules
+          clone_at https://github.com/Arseny271/media.git \
+            09b6c97c0d691c50cd4541e1573995d4066d6f5c \
+            TMessagesProj_Modules/media
+          clone_at https://github.com/dkaraush/jlatexmath-android.git \
+            919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed \
+            TMessagesProj/lib/jlatexmath
+
+          # WebRTC / Telegram native dependencies
+          clone_at https://chromium.googlesource.com/libyuv/libyuv \
+            28ce69c2744a6aafdb58564e7b884aec3f66be5f \
+            TMessagesProj/jni/third_party/libyuv
+          clone_at https://github.com/abseil/abseil-cpp.git \
+            54fac219c4ef0bc379dfffb0b8098725d77ac81b \
+            TMessagesProj/jni/third_party/absl
+          clone_at https://github.com/TelegramMessenger/tgcalls.git \
+            1398c1648f52666b3249111ec3c5b531946e41e4 \
+            TMessagesProj/jni/tgcalls
+
+          # Xiph audio sources
+          clone_at https://github.com/xiph/ogg.git \
+            be05b13e98b048f0b5a0f5fa8ce514d56db5f822 \
+            TMessagesProj/jni/third_party/xiph/ogg
+          clone_at https://github.com/xiph/opus.git \
+            22244de5a79bd1d6d623c32e72bf1954b56235be \
+            TMessagesProj/jni/third_party/xiph/opus
+          clone_at https://github.com/xiph/opusfile.git \
+            a55c164e9891a9326188b7d4d216ec9a88373739 \
+            TMessagesProj/jni/third_party/xiph/opusfile
+
+          # Video / crypto sources used by prebuild/build_all.sh
+          clone_at https://github.com/FFmpeg/FFmpeg.git \
+            45f1910444f34b02621f9f0426ea1a538a613c41 \
+            TMessagesProj/jni/third_party/ffmpeg
+          clone_at https://github.com/webmproject/libvpx.git \
+            1024874c5919305883187e2953de8fcb4c3d7fa6 \
+            TMessagesProj/jni/third_party/libvpx
+          clone_at https://github.com/videolan/dav1d.git \
+            54706fc6bc0cdecab7e9593974a4039cc038fca7 \
+            TMessagesProj/jni/third_party/dav1d
+          clone_at https://github.com/google/boringssl.git \
+            2b44a3701a4788e1ef866ddc7f143060a3d196c9 \
+            TMessagesProj/jni/third_party/boringssl
+          clone_at https://github.com/cisco/openh264.git \
+            652bdb7719f30b52b08e506645a7322ff1b2cc6f \
+            TMessagesProj/jni/third_party/openh264
+
+          # TDLib, Rust wallet, WASM runtime and Prisma
+          clone_at https://github.com/tdlib/td.git \
+            022d60202e446ad1287b9fb68e687c8a0760788b \
+            TMessagesProj/jni/td
+          clone_at https://github.com/dkaraush/tlottie.git \
+            31f1b542f88e7b4be9a01e749920d857535fc715 \
+            TMessagesProj/jni/tlottie
+          clone_at https://github.com/dkaraush/wallet-engine.git \
+            5c65e47cb8d68727c20d89382d0bc51292486b9a \
+            TMessagesProj/jni/wallet-engine
+          clone_at https://github.com/wasm-micro-runtime/wasm-micro-runtime.git \
+            25bd7eb63e828e4bd242cc9b38d260b4b31c6605 \
+            TMessagesProj/jni/third_party/wamr
+          clone_at https://github.com/boostorg/regex.git \
+            4cbcd3078e6ae10d05124379623a1bf03fcb9350 \
+            TMessagesProj/jni/third_party/boost-regex
+          clone_at https://github.com/TelegramMessenger/libprisma.git \
+            31a5d6fbbef8136e4a2b3adaf7b95e2ccaa7436d \
+            TMessagesProj/jni/third_party/libprisma
+
+          echo '=== Verify native source layout ==='
+          test -f TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
+          test -f TMessagesProj/jni/third_party/libvpx/configure
+          test -f TMessagesProj/jni/third_party/dav1d/meson.build
+          test -f TMessagesProj/jni/third_party/boringssl/include/openssl/aes.h
+          test -f TMessagesProj/jni/third_party/openh264/Makefile
+          test -f TMessagesProj/jni/third_party/xiph/opus/opus_sources.mk
+          test -f TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
+          test -f TMessagesProj/jni/td/CMakeLists.txt
+          test -f TMessagesProj/jni/tlottie/Cargo.toml
+          test -f TMessagesProj/jni/wallet-engine/Cargo.toml
+          test -f TMessagesProj/jni/tgcalls/tgcalls/AudioDeviceHelper.cpp
+          test -f TMessagesProj/jni/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
+          test -f TMessagesProj/jni/third_party/wamr/CMakeLists.txt
+          test -f TMessagesProj/jni/third_party/libprisma/libprisma/SyntaxHighlighter.cpp
+          test -f TMessagesProj/jni/third_party/boost-regex/include/boost/regex.hpp
+          test -f TMessagesProj_Modules/media/core_settings.gradle
+          test -f TMessagesProj/lib/jlatexmath/jlatexmath/build.gradle
+
+      - name: Build all Android native libraries
         working-directory: TMessagesProj/jni
         shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          export ANDROID_SDK_ROOT="${ANDROID_HOME:?ANDROID_HOME was not set by setup-android}"
+          export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+          export NDK_VERSION="$ANDROID_NDK_VERSION"
+          export API="$ANDROID_API"
+          export ABIS='arm64-v8a armeabi-v7a x86_64 x86'
+          export JOBS="$BUILD_JOBS"
+          export TLOTTIE_RUST_TOOLCHAIN="$RUST_TOOLCHAIN"
+          export CMAKE_BIN="$ANDROID_SDK_ROOT/cmake/3.22.1/bin/cmake"
+          export NINJA_BIN="$(command -v ninja)"
+          export PATH="$ANDROID_SDK_ROOT/cmake/3.22.1/bin:$HOME/.cargo/bin:$PATH"
+          test -x "$CMAKE_BIN"
+          test -x "$NINJA_BIN"
+          test -f "$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
+          chmod +x prebuild/*.sh
+          bash prebuild/build_all.sh
 
-          export NDK="$ANDROID_HOME/ndk/27.2.12479018"
-          export NINJA_PATH="$(command -v ninja)"
-          export PATH="$ANDROID_HOME/cmake/3.22.1/bin:$PATH"
-
-          if [[ ! -d "$NDK" ]]; then
-            echo "::error::Android NDK not found: $NDK"
-            exit 1
-          fi
-
-          chmod +x \
-            build_libvpx_clang.sh \
-            build_ffmpeg_clang.sh \
-            patch_ffmpeg.sh \
-            patch_boringssl.sh \
-            build_boringssl.sh
-
-          ./build_libvpx_clang.sh
-          ./build_ffmpeg_clang.sh
-          ./patch_ffmpeg.sh
-          ./patch_boringssl.sh
-          ./build_boringssl.sh
-
-      - name: Verify FFmpeg headers
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          headers=(
-            TMessagesProj/jni/third_party/ffmpeg/libavutil/timestamp.h
-            TMessagesProj/jni/third_party/ffmpeg/libavformat/avformat.h
-            TMessagesProj/jni/third_party/ffmpeg/libavcodec/avcodec.h
+          echo '=== Verify generated static libraries ==='
+          libraries=(
+            libcrypto.a
+            libssl.a
+            libopenh264.a
+            libopus.a
+            libvpx.a
+            libdav1d.a
+            libavcodec.a
+            libavformat.a
+            libavutil.a
+            libswresample.a
+            libswscale.a
+            libtlottie.a
+            libwallet_engine.a
+            libtde2e.a
+            libtdutils.a
+            libiwasm.a
+            libprisma.a
           )
-
-          for file in "${headers[@]}"; do
-            if [[ ! -f "$file" ]]; then
-              echo "::error::Missing FFmpeg header: $file"
-              exit 1
-            fi
-            echo "[OK] $file"
+          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+            for library in "${libraries[@]}"; do
+              file="prebuild/lib/${abi}/${library}"
+              if [[ ! -s "$file" ]]; then
+                echo "::error::Native library was not generated: $file"
+                exit 1
+              fi
+            done
+            echo "[OK] ${abi}: all static libraries exist"
           done
 
-      - name: Build APK
+      - name: Build NexusGram APK
         shell: bash
         run: |
-          set -euo pipefail
-
+          set -Eeuo pipefail
           chmod +x ./gradlew
-
           ./gradlew \
             --no-daemon \
             --stacktrace \
+            --max-workers=2 \
             :TMessagesProj_App:assembleAfatRelease
 
-      - name: Upload APK artifact
+      - name: Upload NexusGram APK
         uses: actions/upload-artifact@v4
         with:
           name: NexusGram-APK
