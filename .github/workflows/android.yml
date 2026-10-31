@@ -9,6 +9,7 @@ on:
       - '.github/workflows/android.yml'
       - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
       - 'release/nexusgram-v4.patch.xz.b64'
+      - 'release/nexusgram-v5.patch.xz.b64'
 
 permissions:
   contents: read
@@ -109,6 +110,9 @@ jobs:
           base64 --decode release/nexusgram-v4.patch.xz.b64 > "$RUNNER_TEMP/nexusgram-v4.patch.xz"
           xz --test "$RUNNER_TEMP/nexusgram-v4.patch.xz"
           xz --decompress --stdout "$RUNNER_TEMP/nexusgram-v4.patch.xz" | patch --directory="$RUNNER_TEMP/nexusgram-standalone" --strip=1
+          base64 --decode release/nexusgram-v5.patch.xz.b64 > "$RUNNER_TEMP/nexusgram-v5.patch.xz"
+          xz --test "$RUNNER_TEMP/nexusgram-v5.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/nexusgram-v5.patch.xz" | patch --directory="$RUNNER_TEMP/nexusgram-standalone" --strip=1
 
 
           source_root="$RUNNER_TEMP/nexusgram-standalone/android-standalone/app/src/main/java/app/nexusgram"
