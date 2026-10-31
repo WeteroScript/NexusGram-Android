@@ -25,9 +25,11 @@ jobs:
           unzip -q nexusgram-source.zip
           rsync -a --exclude='.git/' Telegram-master/ ./
           test -f settings.gradle
+
           mkdir -p TMessagesProj_Modules
           git clone https://github.com/Arseny271/media.git TMessagesProj_Modules/media
           git -C TMessagesProj_Modules/media checkout 09b6c97c0d691c50cd4541e1573995d4066d6f5c
+
           test -f TMessagesProj_Modules/media/core_settings.gradle
 
       - name: Set up JDK 17
@@ -38,10 +40,17 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android SDK components
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;27.2.12479018" \
+            "cmake;3.22.1"
 
       - name: Build APK
         run: |
