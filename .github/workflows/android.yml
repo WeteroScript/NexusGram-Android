@@ -29,7 +29,24 @@ jobs:
         run: |
           set -Eeuo pipefail
           sudo apt-get update
-          sudo apt-get install -y build-essential clang cmake git golang-go gperf libclang-dev libtool-bin meson nasm ninja-build perl pkg-config python3 rsync unzip yasm
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            cmake \
+            git \
+            golang-go \
+            gperf \
+            libclang-dev \
+            libtool-bin \
+            meson \
+            nasm \
+            ninja-build \
+            perl \
+            pkg-config \
+            python3 \
+            rsync \
+            unzip \
+            yasm
 
       - name: Reassemble NexusGram source archive
         shell: bash
@@ -101,6 +118,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           yes | sdkmanager --licenses >/dev/null || true
+
           sdkmanager --install \
             "platform-tools" \
             "platforms;android-36" \
@@ -115,6 +133,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
+
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
             | sh -s -- -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN}"
 
@@ -185,7 +204,7 @@ jobs:
             a55c164e9891a9326188b7d4d216ec9a88373739 \
             TMessagesProj/jni/third_party/xiph/opusfile
 
-          # Video / crypto sources used by prebuild/build_all.sh
+          # Video / crypto sources
           clone_at https://github.com/FFmpeg/FFmpeg.git \
             45f1910444f34b02621f9f0426ea1a538a613c41 \
             TMessagesProj/jni/third_party/ffmpeg
@@ -318,6 +337,7 @@ jobs:
             --no-daemon \
             --stacktrace \
             --max-workers=2 \
+            -x :TMessagesProj_App:processAfatReleaseGoogleServices \
             :TMessagesProj_App:assembleAfatRelease
 
       - name: Upload NexusGram APK
