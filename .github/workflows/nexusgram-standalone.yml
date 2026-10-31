@@ -5,10 +5,12 @@ on:
   push:
     paths:
       - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
+      - 'release/nexusgram-v4.patch.xz.b64'
       - '.github/workflows/nexusgram-standalone.yml'
   pull_request:
     paths:
       - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
+      - 'release/nexusgram-v4.patch.xz.b64'
       - '.github/workflows/nexusgram-standalone.yml'
 
 permissions:
@@ -48,6 +50,14 @@ jobs:
           test -s .build/nexusgram/NexusGram-Termux-Backend/server.py
           test -s .build/nexusgram/NexusGram-Termux-Backend/tests/smoke_test.py
           test -s .build/nexusgram/android-standalone/app/src/main/AndroidManifest.xml
+
+      - name: Apply NexusGram v4 source updates
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base64 --decode release/nexusgram-v4.patch.xz.b64 > "$RUNNER_TEMP/nexusgram-v4.patch.xz"
+          xz --test "$RUNNER_TEMP/nexusgram-v4.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/nexusgram-v4.patch.xz" | patch --directory=.build/nexusgram --strip=1
 
       - name: Set up Python
         uses: actions/setup-python@v6
