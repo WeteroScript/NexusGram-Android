@@ -166,12 +166,11 @@ jobs:
               raise SystemExit("Could not locate application element in manifest")
 
           if "android.permission.INTERNET" not in xml:
-              xml = re.sub(
-                  r'(<application\b)',
-                  '    <uses-permission android:name="android.permission.INTERNET" />\n\1',
-                  xml,
-                  count=1,
-              )
+              app_start = re.search(r'<application\b', xml)
+              if not app_start:
+                  raise SystemExit("Could not locate application element for INTERNET permission")
+              permission = '    <uses-permission android:name="android.permission.INTERNET" />\n'
+              xml = xml[:app_start.start()] + permission + xml[app_start.start():]
 
           app_match = re.search(r'<application\b[^>]*>', xml, re.DOTALL)
           app_tag = app_match.group(0)
