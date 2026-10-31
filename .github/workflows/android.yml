@@ -207,6 +207,12 @@ jobs:
           test -s TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
           test -s TMessagesProj_App/src/main/java/app/nexusgram/standalone/network/NexusGramApiClient.java
           grep -q 'app.nexusgram.standalone.MainActivity' "$manifest"
+          python3 - "$manifest" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          ET.parse(sys.argv[1])
+          print("Android manifest XML is valid")
+          PY
 
       - name: Repair malformed Java string literals
         shell: bash
