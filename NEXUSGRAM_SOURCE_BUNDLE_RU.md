@@ -24,6 +24,12 @@ xz --test NexusGram-Standalone-Repository-Bundle-v3.tar.xz
 tar -xJf NexusGram-Standalone-Repository-Bundle-v3.tar.xz
 ```
 
+## Интеграция в основной Android APK
+
+Workflow `NexusGram Android APK` восстанавливает этот архив в CI и копирует два Java-класса в пакет `app.nexusgram.standalone` внутри модуля `TMessagesProj_App`. В AndroidManifest добавляется Activity с отдельным значком запуска **NexusGram Independent**.
+
+Существующий Telegram-derived экран запуска сохраняется. Новый экран работает с NexusGram REST API и отдельной серверной базой. Аккаунты, контакты и история сообщений Telegram автоматически не переносятся; полная замена MTProto/Telegram backend этим этапом не выполняется.
+
 ## Автоматическая проверка и APK
 
 Workflow `NexusGram Standalone Android APK` автоматически:
