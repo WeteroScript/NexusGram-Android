@@ -14,6 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
+
     env:
       ANDROID_NDK_VERSION: "27.2.12479018"
       ANDROID_API: "21"
@@ -65,7 +66,7 @@ jobs:
           unzip -q nexusgram-source.zip
 
           if [[ ! -d Telegram-master ]]; then
-            echo "::error::Telegram-master directory was not found after extraction"
+            echo "::error::Telegram-master directory was not found"
             find . -maxdepth 3 -type d | sort | head -120
             exit 1
           fi
@@ -169,7 +170,6 @@ jobs:
             git -C "$destination" checkout --quiet --detach FETCH_HEAD
           }
 
-          # Gradle submodules
           clone_at https://github.com/Arseny271/media.git \
             09b6c97c0d691c50cd4541e1573995d4066d6f5c \
             TMessagesProj_Modules/media
@@ -178,7 +178,6 @@ jobs:
             919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed \
             TMessagesProj/lib/jlatexmath
 
-          # WebRTC / Telegram native dependencies
           clone_at https://chromium.googlesource.com/libyuv/libyuv \
             28ce69c2744a6aafdb58564e7b884aec3f66be5f \
             TMessagesProj/jni/third_party/libyuv
@@ -191,7 +190,6 @@ jobs:
             1398c1648f52666b3249111ec3c5b531946e41e4 \
             TMessagesProj/jni/tgcalls
 
-          # Xiph audio sources
           clone_at https://github.com/xiph/ogg.git \
             be05b13e98b048f0b5a0f5fa8ce514d56db5f822 \
             TMessagesProj/jni/third_party/xiph/ogg
@@ -204,7 +202,6 @@ jobs:
             a55c164e9891a9326188b7d4d216ec9a88373739 \
             TMessagesProj/jni/third_party/xiph/opusfile
 
-          # Video / crypto sources
           clone_at https://github.com/FFmpeg/FFmpeg.git \
             45f1910444f34b02621f9f0426ea1a538a613c41 \
             TMessagesProj/jni/third_party/ffmpeg
@@ -225,7 +222,6 @@ jobs:
             652bdb7719f30b52b08e506645a7322ff1b2cc6f \
             TMessagesProj/jni/third_party/openh264
 
-          # TDLib, Rust wallet, WASM runtime and Prisma
           clone_at https://github.com/tdlib/td.git \
             022d60202e446ad1287b9fb68e687c8a0760788b \
             TMessagesProj/jni/td
@@ -276,7 +272,7 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          export ANDROID_SDK_ROOT="${ANDROID_HOME:?ANDROID_HOME was not set by setup-android}"
+          export ANDROID_SDK_ROOT="${ANDROID_HOME:?ANDROID_HOME was not set}"
           export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
           export NDK_VERSION="$ANDROID_NDK_VERSION"
           export API="$ANDROID_API"
@@ -327,6 +323,47 @@ jobs:
             echo "[OK] ${abi}: all static libraries exist"
           done
 
+      - name: Configure Firebase for NexusGram
+        shell: bash
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          set -Eeuo pipefail
+
+          if [[ -z "${GOOGLE_SERVICES_JSON_BASE64:-}" ]]; then
+            echo "::error::Missing GOOGLE_SERVICES_JSON_BASE64 repository secret"
+            exit 1
+          fi
+
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" \
+            | base64 --decode > TMessagesProj_App/google-services.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("TMessagesProj_App/google-services.json")
+          data = json.loads(path.read_text())
+
+          expected = "app.nexusgram"
+          clients = data.get("client", [])
+
+          packages = [
+              client.get("client_info", {})
+                    .get("android_client_info", {})
+                    .get("package_name")
+              for client in clients
+          ]
+
+          if expected not in packages:
+              raise SystemExit(
+                  f"Firebase package mismatch: expected {expected}, "
+                  f"found {packages}"
+              )
+
+          print(f"Firebase configuration verified for {expected}")
+          PY
+
       - name: Build NexusGram APK
         shell: bash
         run: |
@@ -337,7 +374,6 @@ jobs:
             --no-daemon \
             --stacktrace \
             --max-workers=2 \
-            -x :TMessagesProj_App:processAfatReleaseGoogleServices \
             :TMessagesProj_App:assembleAfatRelease
 
       - name: Upload NexusGram APK
