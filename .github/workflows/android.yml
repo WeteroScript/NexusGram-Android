@@ -88,6 +88,126 @@ jobs:
             echo "[OK] $file"
           done
 
+      - name: Integrate independent NexusGram client into the existing APK
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          parts=(release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*)
+          if (( ${#parts[@]} != 15 )); then
+            echo "::error::Expected 15 standalone bundle segments, found ${#parts[@]}"
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/nexusgram-standalone"
+          cat "${parts[@]}" | base64 --decode > "$RUNNER_TEMP/nexusgram-standalone.tar.xz"
+          xz --test "$RUNNER_TEMP/nexusgram-standalone.tar.xz"
+          tar -xJf "$RUNNER_TEMP/nexusgram-standalone.tar.xz" -C "$RUNNER_TEMP/nexusgram-standalone"
+
+          source_root="$RUNNER_TEMP/nexusgram-standalone/android-standalone/app/src/main/java/app/nexusgram"
+          test -s "$source_root/MainActivity.java"
+          test -s "$source_root/network/NexusGramApiClient.java"
+          target_root="TMessagesProj_App/src/main/java/app/nexusgram/standalone"
+          mkdir -p "$target_root/network"
+
+          python3 - "$source_root" "$target_root" <<'PY'
+          from pathlib import Path
+          import sys
+
+          source_root = Path(sys.argv[1])
+          target_root = Path(sys.argv[2])
+          activity = (source_root / "MainActivity.java").read_text()
+          api = (source_root / "network" / "NexusGramApiClient.java").read_text()
+
+          activity = activity.replace(
+              "package app.nexusgram;",
+              "package app.nexusgram.standalone;",
+              1,
+          ).replace(
+              "import app.nexusgram.network.NexusGramApiClient;",
+              "import app.nexusgram.standalone.network.NexusGramApiClient;",
+              1,
+          )
+          api = api.replace(
+              "package app.nexusgram.network;",
+              "package app.nexusgram.standalone.network;",
+              1,
+          )
+          if "package app.nexusgram.standalone;" not in activity:
+              raise SystemExit("Failed to relocate NexusGram Activity package")
+          if "package app.nexusgram.standalone.network;" not in api:
+              raise SystemExit("Failed to relocate NexusGram API client package")
+
+          (target_root / "MainActivity.java").write_text(activity)
+          (target_root / "network" / "NexusGramApiClient.java").write_text(api)
+          print("Integrated standalone NexusGram Activity and REST client")
+          PY
+
+          manifest="TMessagesProj_App/src/main/AndroidManifest.xml"
+          if [[ ! -f "$manifest" ]]; then
+            echo "::error::Expected app manifest not found: $manifest"
+            exit 1
+          fi
+
+          python3 - "$manifest" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          path = Path(sys.argv[1])
+          xml = path.read_text()
+          activity_name = "app.nexusgram.standalone.MainActivity"
+          if activity_name in xml:
+              print("NexusGram standalone Activity is already registered")
+              raise SystemExit(0)
+
+          if not re.search(r'<application\\b[^>]*>', xml, re.DOTALL):
+              raise SystemExit("Could not locate application element in manifest")
+
+          if "android.permission.INTERNET" not in xml:
+              xml = re.sub(
+                  r'(<application\\b)',
+                  '    <uses-permission android:name="android.permission.INTERNET" />\\n\\1',
+                  xml,
+                  count=1,
+              )
+
+          app_match = re.search(r'<application\\b[^>]*>', xml, re.DOTALL)
+          app_tag = app_match.group(0)
+          if "android:usesCleartextTraffic" not in app_tag:
+              updated_tag = app_tag[:-1] + ' android:usesCleartextTraffic="true">'
+          else:
+              updated_tag = re.sub(
+                  r'android:usesCleartextTraffic="[^"]*"',
+                  'android:usesCleartextTraffic="true"',
+                  app_tag,
+                  count=1,
+              )
+          xml = xml[:app_match.start()] + updated_tag + xml[app_match.end():]
+
+          launcher = '''
+              <activity
+                  android:name="app.nexusgram.standalone.MainActivity"
+                  android:label="NexusGram Independent"
+                  android:exported="true"
+                  android:configChanges="orientation|screenSize|keyboardHidden">
+                  <intent-filter>
+                      <action android:name="android.intent.action.MAIN" />
+                      <category android:name="android.intent.category.LAUNCHER" />
+                  </intent-filter>
+              </activity>
+          '''
+          if "</application>" not in xml:
+              raise SystemExit("Could not locate application closing tag")
+          xml = xml.replace("</application>", launcher + "\\n</application>", 1)
+          path.write_text(xml)
+          print("Registered the second launcher entry: NexusGram Independent")
+          PY
+
+          test -s TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
+          test -s TMessagesProj_App/src/main/java/app/nexusgram/standalone/network/NexusGramApiClient.java
+          grep -q 'app.nexusgram.standalone.MainActivity' "$manifest"
+
       - name: Repair malformed Java string literals
         shell: bash
         run: |
