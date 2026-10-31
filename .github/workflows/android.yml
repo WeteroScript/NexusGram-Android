@@ -1,4 +1,5 @@
 name: NexusGram Android APK
+# Standalone client integration validation pass
 
 on:
   workflow_dispatch:
