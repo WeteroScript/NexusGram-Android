@@ -41,9 +41,18 @@ jobs:
           mkdir -p TMessagesProj/jni/third_party
           git clone --depth 1 https://chromium.googlesource.com/libyuv/libyuv TMessagesProj/jni/third_party/libyuv
           git clone --depth 1 https://github.com/abseil/abseil-cpp.git TMessagesProj/jni/third_party/absl
+          git clone --depth 1 https://github.com/xiph/ogg.git TMessagesProj/jni/third_party/xiph/ogg
+          git clone --depth 1 https://github.com/xiph/opus.git TMessagesProj/jni/third_party/xiph/opus
+          git clone --depth 1 https://github.com/xiph/opusfile.git TMessagesProj/jni/third_party/xiph/opusfile
+
+          mkdir -p TMessagesProj/jni/voip
+          git clone --depth 1 https://github.com/TelegramMessenger/tgcalls.git TMessagesProj/jni/voip/tgcalls
 
           test -f TMessagesProj/jni/third_party/libyuv/CMakeLists.txt
           test -f TMessagesProj/jni/third_party/absl/CMakeLists.txt
+          test -f TMessagesProj/jni/third_party/xiph/opusfile/src/info.c
+          test -f TMessagesProj/jni/voip/tgcalls/tgcalls/AudioDeviceHelper.cpp
+          test -f TMessagesProj/jni/voip/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
