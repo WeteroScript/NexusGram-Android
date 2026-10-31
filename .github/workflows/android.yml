@@ -21,6 +21,8 @@ jobs:
 
       - name: Reassemble source archive
         run: |
+          set -e
+
           cat nexusgram.part* > nexusgram-source.zip
           unzip -q nexusgram-source.zip
           rsync -a --exclude='.git/' Telegram-master/ ./
@@ -43,7 +45,9 @@ jobs:
           mkdir -p TMessagesProj/jni/third_party
 
           git clone --depth 1 https://chromium.googlesource.com/libyuv/libyuv TMessagesProj/jni/third_party/libyuv
-          git clone --depth 1 https://github.com/abseil/abseil-cpp.git TMessagesProj/jni/third_party/absl
+
+          git clone --depth 1 --branch 20250127.1 https://github.com/abseil/abseil-cpp.git TMessagesProj/jni/third_party/absl
+
           git clone --depth 1 https://github.com/xiph/ogg.git TMessagesProj/jni/third_party/xiph/ogg
           git clone --depth 1 https://github.com/xiph/opus.git TMessagesProj/jni/third_party/xiph/opus
           git clone --depth 1 https://github.com/xiph/opusfile.git TMessagesProj/jni/third_party/xiph/opusfile
@@ -59,6 +63,50 @@ jobs:
           test -f TMessagesProj/jni/third_party/boringssl/include/openssl/rand.h
           test -f TMessagesProj/jni/tgcalls/tgcalls/AudioDeviceHelper.cpp
           test -f TMessagesProj/jni/tgcalls/tgcalls/platform/android/AndroidInterface.cpp
+
+          grep -Eq 'using[[:space:]]+Nonnull[[:space:]]*=' TMessagesProj/jni/third_party/absl/absl/base/nullability.h
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          include = '#include "absl/base/nullability.h"'
+
+          targets = [
+              Path("TMessagesProj/jni/voip/webrtc/api/environment/environment.h"),
+              Path("TMessagesProj/jni/voip/webrtc/api/task_queue/pending_task_safety_flag.h"),
+              Path("TMessagesProj/jni/voip/webrtc/modules/audio_processing/include/audio_processing.h"),
+          ]
+
+          for path in targets:
+              if not path.is_file():
+                  raise SystemExit(f"Required WebRTC header missing: {path}")
+
+              source = path.read_text(encoding="utf-8")
+
+              if include not in source:
+                  lines = source.splitlines()
+
+                  guard_index = next(
+                      (i for i, line in enumerate(lines) if line.startswith("#define ")),
+                      None
+                  )
+
+                  if guard_index is None:
+                      raise SystemExit(f"Header guard not found: {path}")
+
+                  lines.insert(guard_index + 1, "")
+                  lines.insert(guard_index + 2, include)
+
+                  path.write_text(
+                      "\n".join(lines) + "\n",
+                      encoding="utf-8"
+                  )
+
+              if include not in path.read_text(encoding="utf-8"):
+                  raise SystemExit(f"Abseil nullability include missing: {path}")
+
+              print(f"Verified: {path}")
+          PY
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
