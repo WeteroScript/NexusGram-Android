@@ -31,23 +31,9 @@ jobs:
           set -Eeuo pipefail
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential \
-            clang \
-            cmake \
-            git \
-            golang-go \
-            gperf \
-            libclang-dev \
-            libtool-bin \
-            meson \
-            nasm \
-            ninja-build \
-            perl \
-            pkg-config \
-            python3 \
-            rsync \
-            unzip \
-            yasm
+            build-essential clang cmake git golang-go gperf \
+            libclang-dev libtool-bin meson nasm ninja-build \
+            perl pkg-config python3 rsync unzip yasm
 
       - name: Reassemble NexusGram source archive
         shell: bash
@@ -101,6 +87,45 @@ jobs:
             fi
             echo "[OK] $file"
           done
+
+      - name: Repair malformed Java string literals
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path(
+              "TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java"
+          )
+
+          if not path.is_file():
+              raise SystemExit(f"Missing expected source file: {path}")
+
+          source = path.read_text()
+
+          pattern = re.compile(r'(\.append\(")(.*?)(?="\))', re.DOTALL)
+
+          repaired, count = pattern.subn(
+              lambda match: match.group(1) + match.group(2).replace(
+                  "\n", r"\n"
+              ),
+              source,
+          )
+
+          if count == 0:
+              raise SystemExit(
+                  "No multiline append string literals matched. "
+                  "Inspect DeveloperPanelActivity.java."
+              )
+
+          path.write_text(repaired)
+          print(f"Repaired {count} multiline append string literal(s)")
+          PY
+
+          sed -n '270,310p' \
+            TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -293,23 +318,11 @@ jobs:
           echo '=== Verify generated static libraries ==='
 
           libraries=(
-            libcrypto.a
-            libssl.a
-            libopenh264.a
-            libopus.a
-            libvpx.a
-            libdav1d.a
-            libavcodec.a
-            libavformat.a
-            libavutil.a
-            libswresample.a
-            libswscale.a
-            libtlottie.a
-            libwallet_engine.a
-            libtde2e.a
-            libtdutils.a
-            libiwasm.a
-            libprisma.a
+            libcrypto.a libssl.a libopenh264.a libopus.a libvpx.a
+            libdav1d.a libavcodec.a libavformat.a libavutil.a
+            libswresample.a libswscale.a libtlottie.a
+            libwallet_engine.a libtde2e.a libtdutils.a
+            libiwasm.a libprisma.a
           )
 
           for abi in arm64-v8a armeabi-v7a x86_64 x86; do
