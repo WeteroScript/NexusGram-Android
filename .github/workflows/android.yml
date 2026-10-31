@@ -29,8 +29,12 @@ jobs:
           mkdir -p TMessagesProj_Modules
           git clone https://github.com/Arseny271/media.git TMessagesProj_Modules/media
           git -C TMessagesProj_Modules/media checkout 09b6c97c0d691c50cd4541e1573995d4066d6f5c
-
           test -f TMessagesProj_Modules/media/core_settings.gradle
+
+          mkdir -p TMessagesProj/lib
+          git clone https://github.com/dkaraush/jlatexmath-android.git TMessagesProj/lib/jlatexmath
+          git -C TMessagesProj/lib/jlatexmath checkout 919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed
+          test -f TMessagesProj/lib/jlatexmath/jlatexmath/build.gradle
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
