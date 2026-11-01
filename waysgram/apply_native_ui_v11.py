@@ -158,10 +158,13 @@ def main() -> None:
     intro = root / "TMessagesProj/src/main/java/org/telegram/ui/IntroActivity.java"
     login = root / "TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java"
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
-    strings = root / "TMessagesProj/src/main/res/values/strings.xml"
-    for file in (intro, login, manifest, strings):
+    strings_root = root / "TMessagesProj/src/main/res"
+    string_files = sorted(strings_root.glob("values*/strings.xml"))
+    for file in (intro, login, manifest):
         if not file.is_file():
             raise SystemExit(f"Missing required source file: {file}")
+    if not string_files:
+        raise SystemExit(f"No Android strings.xml files found under: {strings_root}")
 
     intro_source = intro.read_text(encoding="utf-8")
     if "new LoginActivity().setIntroView(frameContainerView, startMessagingButton)" not in intro_source:
@@ -170,12 +173,12 @@ def main() -> None:
     changed = [
         patch_login(login),
         patch_manifest(manifest),
-        patch_strings(strings),
+        *(patch_strings(path) for path in string_files),
     ]
     removed = patch_obsolete_activities(root)
-    print(f"WaysGram native login UI verified. Updated {sum(changed)} source file(s); removed {removed} unreachable Portal/Home activity file(s).")
-    print("No WaysGram Portal/Home entry point or visible Test Backend control remains.")
-    print("This restores native navigation only; it does not yet replace MTProto auth or message transport.")
+    print(f"WaysGram branding applied to {len(string_files)} locale string file(s).")
+    print(f"Native LoginActivity retained. Updated {sum(changed)} source/resource file(s); removed {removed} unreachable Portal/Home activity file(s).")
+    print("No custom Portal/Home entry point or visible Test Backend control remains.")
 
 
 if __name__ == "__main__":
