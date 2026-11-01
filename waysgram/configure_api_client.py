@@ -33,14 +33,14 @@ public final class WaysGramApiConfig {
         }
     }
 
-    public static NexusGramApiClient createClient(Context context) {
+    public static WaysGramApiClient createClient(Context context) {
         String baseUrl = getBaseUrl(context);
         if (baseUrl.isEmpty()) {
             throw new IllegalStateException(
                     "WaysGram API URL is not configured in this build. "
                     + "Set the WAYSGRAM_API_BASE_URL repository secret.");
         }
-        return new NexusGramApiClient(context.getApplicationContext(), baseUrl);
+        return new WaysGramApiClient(context.getApplicationContext(), baseUrl);
     }
 }
 '''
@@ -66,8 +66,8 @@ def main() -> None:
 
     gradle = root / "TMessagesProj/build.gradle"
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
-    client_source = root / "waysgram/NexusGramApiClient.java"
-    client = root / "TMessagesProj/src/main/java/app/nexusgram/network/NexusGramApiClient.java"
+    client_source = root / "waysgram/WaysGramApiClient.java"
+    client = root / "TMessagesProj/src/main/java/app/nexusgram/network/WaysGramApiClient.java"
     config = root / "TMessagesProj/src/main/java/app/nexusgram/network/WaysGramApiConfig.java"
     for path in (gradle, manifest, client_source):
         if not path.is_file():
