@@ -1,0 +1,37 @@
+name: WaysGram Android Patch Tests
+
+on:
+  push:
+    paths:
+      - "waysgram/**"
+      - ".github/workflows/waysgram-patch-tests.yml"
+  pull_request:
+    paths:
+      - "waysgram/**"
+      - ".github/workflows/waysgram-patch-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  patch-tests:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: Compile patch tooling
+        run: python -m py_compile waysgram/*.py
+
+      - name: Test idempotent patch application
+        run: python waysgram/test_patch_tools.py
