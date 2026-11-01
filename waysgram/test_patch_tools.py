@@ -246,7 +246,7 @@ class MessagesController {
         }
     }
     private void loadMessagesInternal() {
-        final TLRPC.Chat chat = dialogId < 0 ? getChat(-dialogId): null;
+            final TLRPC.Chat chat = dialogId < 0 ? getChat(-dialogId): null;
     }
     public void processLoadedMessages(TLRPC.messages_Messages messagesRes, int resCount, long dialogId, long mergeDialogId, int count, int max_id, int offset_date, boolean isCache, int classGuid,
     }
