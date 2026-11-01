@@ -115,6 +115,7 @@ jobs:
           set -Eeuo pipefail
           base64 --decode waysgram/server-admin.patch.gz.b64 | gzip --decompress | patch --directory=WaysGram-Backend --strip=1
           python3 waysgram/apply_admin_web_ui.py
+          python3 waysgram/test_admin_channel_roles.py
           python3 - <<'PY'
           from pathlib import Path
           path = Path("WaysGram-Backend/tests/smoke_test.py")
