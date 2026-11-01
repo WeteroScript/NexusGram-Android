@@ -53,6 +53,14 @@ public final class WaysGramApiRuntime {
         return client != null;
     }
 
+    /**
+     * NexusGram is a WaysGram-only client. Never fall back to Telegram MTProto
+     * when the API URL or local WaysGram session is missing.
+     */
+    public static boolean isWaysGramMode() {
+        return true;
+    }
+
     public static boolean isSignedIn() {
         NexusGramApiClient current = client;
         return current != null && current.isSignedIn();
