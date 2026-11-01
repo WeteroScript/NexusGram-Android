@@ -20,5 +20,10 @@ if old in source:
 elif 'request(base, "/api/profile", "POST", {"display_name": "No token"}, expected=401)' not in source:
     raise SystemExit("Could not locate the existing profile update smoke test")
 
+if needle in source:
+    source = source.replace(needle, addition, 1)
+elif '"username": "Q"' not in source:
+    raise SystemExit("Could not locate second-user registration for duplicate username tests")
+
 path.write_text(source, encoding="utf-8")
 print("Smoke test now covers authenticated POST /api/profile and profile fields")
