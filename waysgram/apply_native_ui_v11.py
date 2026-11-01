@@ -102,6 +102,37 @@ def patch_strings(path: Path) -> bool:
     return False
 
 
+def patch_obsolete_activities(root: Path) -> int:
+    source_root = root / "TMessagesProj/src/main/java"
+    obsolete = {
+        "WaysGramPortalActivity": source_root / "app/nexusgram/ui/WaysGramPortalActivity.java",
+        "WaysGramHomeActivity": source_root / "app/nexusgram/ui/WaysGramHomeActivity.java",
+    }
+    existing = {name: path for name, path in obsolete.items() if path.is_file()}
+    if not existing:
+        return 0
+
+    excluded = set(existing.values())
+    references: dict[str, list[str]] = {name: [] for name in existing}
+    for java_file in source_root.rglob("*.java"):
+        if java_file in excluded:
+            continue
+        source = java_file.read_text(encoding="utf-8", errors="replace")
+        for name in existing:
+            if name in source:
+                references[name].append(str(java_file.relative_to(root)))
+
+    used = {name: paths for name, paths in references.items() if paths}
+    if used:
+        details = "; ".join(f"{name}: {', '.join(paths)}" for name, paths in used.items())
+        raise RuntimeError(f"Obsolete Portal/Home activities still have external references: {details}")
+
+    for path in existing.values():
+        path.unlink()
+        print(f"Removed unreachable custom activity: {path.relative_to(root)}")
+    return len(existing)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path("."), help="Unpacked Android project root")
@@ -125,7 +156,8 @@ def main() -> None:
         patch_manifest(manifest),
         patch_strings(strings),
     ]
-    print(f"Native Telegram login UI verified. Updated {sum(changed)} source file(s).")
+    removed = patch_obsolete_activities(root)
+    print(f"Native Telegram login UI verified. Updated {sum(changed)} source file(s); removed {removed} unreachable Portal/Home activity file(s).")
     print("No WaysGram Portal/Home entry point or visible Test Backend control remains.")
     print("This restores native navigation only; it does not yet replace MTProto auth or message transport.")
 
