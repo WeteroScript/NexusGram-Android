@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Configure the NexusGram source tree to receive its WaysGram API URL at build time."""
+"""Configure the WaysGram source tree to receive its WaysGram API URL at build time."""
 from __future__ import annotations
 
 from pathlib import Path
