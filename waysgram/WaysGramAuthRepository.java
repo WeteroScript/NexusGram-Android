@@ -49,7 +49,17 @@ public final class WaysGramAuthRepository {
             fail(callback, 400, e.getMessage());
             return;
         }
-        api.requestCode(phone, callback);
+        api.requestCode(phone, new WaysGramApiClient.Callback() {
+            @Override
+            public void onSuccess(JSONObject result) {
+                callbackSuccess(callback, result);
+            }
+
+            @Override
+            public void onError(WaysGramApiClient.ApiError error) {
+                callbackError(callback, error);
+            }
+        });
     }
 
     public void verifyCode(String rawPhone, String rawCode, Callback callback) {
