@@ -109,9 +109,9 @@ def main() -> None:
     source = client.read_text(encoding="utf-8")
     old_error = 'String message = json.optString("error", "Ошибка WaysGram API: HTTP " + status);'
     new_error = 'String message = json.optString("detail", json.optString("error", "Ошибка WaysGram API: HTTP " + status));'
-    if new_error not in source:
+    if 'json.optString("detail", json.optString("error"' not in source:
         if source.count(old_error) != 1:
-            raise RuntimeError("Could not locate Android REST error response parser")
+            raise RuntimeError("Android REST client must parse FastAPI detail errors")
         client.write_text(source.replace(old_error, new_error, 1), encoding="utf-8")
         changed += 1
 
