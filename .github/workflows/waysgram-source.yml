@@ -84,6 +84,7 @@ jobs:
               if path.exists():
                   value = path.read_text(encoding="utf-8")
                   value = value.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
+                  value = value.replace('ROOT / "nexusgram.db"', 'ROOT / "waysgram.db"')
                   path.write_text(value, encoding="utf-8")
 
           login = Path("TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java")
