@@ -1,15 +1,15 @@
-# NexusGram
+# WaysGram
 
-NexusGram — Android-клиент на основе исходного проекта Telegram. Цель проекта — сохранить штатные экраны и навигацию Telegram, постепенно подключая их к единому WaysGram AuthBot backend.
+WaysGram — Android-клиент на основе исходного Android-кода Telegram. Продукт и пользовательский интерфейс называются WaysGram; серверная часть работает через единый WaysGram AuthBot.
 
 ## Сборка APK
 
 Проект использует GitHub Actions: `.github/workflows/android.yml`.
 
 1. Открой вкладку Actions.
-2. Выбери **NexusGram Android APK**.
+2. Выбери **WaysGram Android APK**.
 3. Нажми **Run workflow**.
-4. После успешного завершения скачай артефакт **NexusGram-APK**.
+4. После успешного завершения скачай артефакт **WaysGram-APK**.
 
 Workflow собирает исходник из девяти частей `nexusgram.part01`–`nexusgram.part09`, восстанавливает Telegram source tree, удаляет отдельный Portal/Test Backend UI, устанавливает REST-клиент и bridge для native login/text messaging, а затем собирает APK.
 
@@ -17,11 +17,11 @@ Workflow собирает исходник из девяти частей `nexus
 
 ## Оригинальный интерфейс и native integration
 
-Все изменения применяются к штатным исходникам Telegram во время сборки. Внешний вид экранов не заменяется самодельными Portal/Home-страницами.
+Android-клиент собирается под брендом WaysGram; базовые экраны и навигация сохранены из исходного кода Telegram. Внешний вид экранов не заменяется самодельными Portal/Home-страницами.
 
 - `apply_native_ui_v11.py` сохраняет переход IntroActivity → LoginActivity, удаляет WaysGram Portal CTA, Portal/Home Activity registration и видимый переключатель `Test Backend`.
 - `configure_api_client.py` устанавливает REST-клиент, читает HTTPS endpoint из build-time manifest metadata и добавляет `WaysGramApiConfig`.
-- `configure_api_runtime.py` инициализирует единый экземпляр `NexusGramApiClient` в `ApplicationLoader`.
+- `configure_api_runtime.py` инициализирует единый экземпляр `WaysGramApiClient` в `ApplicationLoader`.
 - `configure_native_messenger.py` подключает WaysGram REST к штатным `LoginActivity.PhoneView` / SMS code view, `MessagesController` и `SendMessagesHelper`.
 - `WaysGramDataMapper.java` переводит серверные профили, диалоги и текстовые сообщения в native Telegram TL-модели, чтобы штатные `DialogsActivity` и `ChatActivity` могли их отображать.
 
@@ -53,6 +53,6 @@ Workflow собирает исходник из девяти частей `nexus
 
 ## Исходники
 
-В репозитории хранятся части исходного архива Telegram и repeatable patch scripts в `waysgram/`. Полная Android-сборка выполняется GitHub Actions с восстановлением исходников и сборкой native-библиотек.
+В репозитории хранятся части исходного Android-архива и repeatable patch scripts в `waysgram/`. Полная Android-сборка выполняется GitHub Actions с восстановлением исходников и сборкой native-библиотек.
 
 Перед распространением APK необходимо проверить лицензии исходного проекта и используемых компонентов.
