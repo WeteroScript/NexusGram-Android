@@ -8,6 +8,7 @@ on:
       - 'nexusgram.part*'
       - '.github/workflows/android.yml'
       - 'waysgram/**'
+      - 'waysgram-v10/**'
       - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
       - 'release/nexusgram-v4.patch.xz.b64'
       - 'release/nexusgram-v5.patch.xz.b64'
@@ -185,6 +186,42 @@ jobs:
           PY
           python3 -m py_compile WaysGram-Backend/server.py WaysGram-Backend/tests/smoke_test.py
           (cd WaysGram-Backend && python3 tests/smoke_test.py)
+
+      - name: Install WaysGram v10 portal, recovery client and backend
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 waysgram-v10/install_v10.py "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/waysgram-v10"
+          python3 -m compileall -q WaysGram-Backend/server.py WaysGram-Backend/tests
+          bash -n WaysGram-Backend/start-termux.sh
+          (cd WaysGram-Backend && python3 tests/smoke_test.py)
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          root = Path(".")
+          manifest = ET.parse(root / "TMessagesProj/src/main/AndroidManifest.xml").getroot()
+          ns = "{http://schemas.android.com/apk/res/android}"
+          activities = {node.attrib.get(ns + "name") for node in manifest.findall(".//activity")}
+          required = {
+              "app.nexusgram.ui.WaysGramPortalActivity",
+              "app.nexusgram.ui.WaysGramHomeActivity",
+          }
+          if not required.issubset(activities):
+              raise SystemExit("WaysGram activities are missing from AndroidManifest.xml")
+
+          intro = (root / "TMessagesProj/src/main/java/org/telegram/ui/IntroActivity.java").read_text()
+          if intro.count("openWaysGramPortal();") != 2 or "new LoginActivity()" in intro:
+              raise SystemExit("IntroActivity does not route both start actions to WaysGram")
+          launch = (root / "TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java").read_text()
+          start = launch.index("private BaseFragment getClientNotActivatedFragment()")
+          if "return new IntroActivity();" not in launch[start:start + 600]:
+              raise SystemExit("Unauthenticated launch does not return to IntroActivity")
+          gradle = (root / "TMessagesProj_App/build.gradle").read_text()
+          if 'outputFileName = "WaysGram.apk"' not in gradle:
+              raise SystemExit("APK output is not branded WaysGram.apk")
+          print("PASS WaysGram v10 launch flow, activities, manifest and APK name")
+          PY
 
       - name: Package complete WaysGram source ZIP
         shell: bash
