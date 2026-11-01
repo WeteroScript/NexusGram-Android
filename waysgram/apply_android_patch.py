@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
-"""Inject the WaysGram admin panel into the restored original Android UI."""
+"""Inject WaysGram additions into the restored original Android project."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = ROOT / "TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java"
 PANEL_SOURCE = Path(__file__).with_name("DeveloperPanelActivity.java")
 PANEL_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java"
+API_SOURCE = Path(__file__).with_name("WaysGramApiClient.java")
+API_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramApiClient.java"
 
-if not SETTINGS.is_file():
-    raise SystemExit(f"Missing original settings source: {SETTINGS}")
-if not PANEL_SOURCE.is_file():
-    raise SystemExit(f"Missing WaysGram admin activity source: {PANEL_SOURCE}")
+for required in (SETTINGS, PANEL_SOURCE, API_SOURCE):
+    if not required.is_file():
+        raise SystemExit(f"Missing required WaysGram integration file: {required}")
+
+api_source = API_SOURCE.read_text(encoding="utf-8")
+api_contract = (
+    "normalizeBaseUrl", "getConfig", "requestCode", "verifyCode",
+    "getConversations", "getMessages", "sendMessage",
+    "getChannels", "getChannelMessages", "getGifts",
+    "Authorization", "Bearer ", "CONNECT_TIMEOUT_MS", "READ_TIMEOUT_MS",
+)
+missing = [marker for marker in api_contract if marker not in api_source]
+if missing:
+    raise SystemExit("WaysGram REST client contract is incomplete: " + ", ".join(missing))
 
 source = SETTINGS.read_text(encoding="utf-8")
 old_entry = '''        items.add(UItem.asShadow(null));
@@ -36,4 +48,6 @@ if "case 27:" not in source or "new DeveloperPanelActivity()" not in source:
 SETTINGS.write_text(source, encoding="utf-8")
 PANEL_TARGET.parent.mkdir(parents=True, exist_ok=True)
 PANEL_TARGET.write_text(PANEL_SOURCE.read_text(encoding="utf-8"), encoding="utf-8")
-print("WaysGram admin panel injected into original SettingsActivity (item 27)")
+API_TARGET.parent.mkdir(parents=True, exist_ok=True)
+API_TARGET.write_text(api_source, encoding="utf-8")
+print("WaysGram admin panel and REST transport injected into original Android project")
