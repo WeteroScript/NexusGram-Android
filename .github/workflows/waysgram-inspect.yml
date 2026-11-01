@@ -34,7 +34,7 @@ jobs:
           rsync -a --exclude='.git/' "$RUNNER_TEMP/unpacked/Telegram-master/" "$GITHUB_WORKSPACE/"
           echo "ORIGINAL SOURCE RESTORED"
 
-      - name: Locate original login, settings and app identity
+      - name: Locate original login, settings, developer panel and app identity
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -47,27 +47,27 @@ jobs:
             echo "=== LOGIN / AUTH CLASSES ==="
             find . -type f \( -iname '*login*' -o -iname '*phone*' -o -iname '*code*' \) \
               -not -path '*/build/*' | sort | sed -n '1,250p'
-            echo "=== SETTINGS CLASSES ==="
-            find . -type f \( -iname '*setting*' -o -iname '*preference*' \) \
-              -not -path '*/build/*' | sort | sed -n '1,250p'
+            echo "=== SETTINGS / DEVELOPER CLASSES ==="
+            find . -type f \( -iname '*setting*' -o -iname '*preference*' -o -iname '*DeveloperPanel*' \) \
+              -not -path '*/build/*' | sort | sed -n '1,300p'
             echo "=== KEY CLASS DECLARATIONS ==="
-            grep -RIl --include='*.java' -E 'class (SettingsActivity|LoginActivity|LaunchActivity|LoginOrView)' . \
-              --exclude-dir=build | sort | sed -n '1,100p'
+            grep -RIl --include='*.java' -E 'class (SettingsActivity|LoginActivity|LaunchActivity|LoginOrView|DeveloperPanelActivity)' . \
+              --exclude-dir=build | sort | sed -n '1,120p'
             echo "=== APP NAME RESOURCES ==="
-            grep -RIn --include='strings.xml' -E 'app_name|AppName|Telegram' . \
-              --exclude-dir=build | sed -n '1,180p'
+            grep -RIn --include='strings.xml' -E 'name="AppName"|name="AppNameBeta"' . \
+              --exclude-dir=build | sed -n '1,120p'
             echo "=== MODULES ==="
             find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.kts -o -name settings.gradle \) | sort
           } > "$report"
 
           while IFS= read -r file; do
             case "$file" in
-              *SettingsActivity.java|*LoginActivity.java|*LaunchActivity.java|*LoginOrView.java|*AndroidManifest.xml|*/values/strings.xml|*/values/strings*.xml)
+              *SettingsActivity.java|*LoginActivity.java|*LaunchActivity.java|*LoginOrView.java|*DeveloperPanelActivity.java|*AndroidManifest.xml|*/values/strings.xml|*/values/strings*.xml)
                 mkdir -p "$out/files/$(dirname "$file")"
                 cp "$file" "$out/files/$file"
                 ;;
             esac
-          done < <(find . -type f \( -name '*SettingsActivity.java' -o -name '*LoginActivity.java' -o -name '*LaunchActivity.java' -o -name '*LoginOrView.java' -o -name AndroidManifest.xml -o -name 'strings.xml' \) -not -path '*/build/*')
+          done < <(find . -type f \( -name '*SettingsActivity.java' -o -name '*LoginActivity.java' -o -name '*LaunchActivity.java' -o -name '*LoginOrView.java' -o -name '*DeveloperPanelActivity.java' -o -name AndroidManifest.xml -o -name 'strings.xml' \) -not -path '*/build/*')
 
           echo "=== SELECTED FILES ===" >> "$report"
           find "$out/files" -type f | sort >> "$report"
