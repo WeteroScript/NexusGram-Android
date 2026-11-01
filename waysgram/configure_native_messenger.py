@@ -70,7 +70,7 @@ def patch_login(root: Path) -> int:
     changed = 0
     changed += add_imports(
         login,
-        "import app.nexusgram.network.NexusGramApiClient;\n"
+        "import app.nexusgram.network.WaysGramApiClient;\n"
         "import app.nexusgram.network.WaysGramApiRuntime;\n"
         "import app.nexusgram.network.WaysGramDataMapper;\n"
         "import org.json.JSONObject;\n",
@@ -119,7 +119,7 @@ def patch_login(root: Path) -> int:
                         "Для входа WaysGram используйте виртуальный номер +1 и 10 цифр.");
                 return;
             }
-            NexusGramApiClient api = WaysGramApiRuntime.getClient();
+            WaysGramApiClient api = WaysGramApiRuntime.getClient();
             if (api == null) {
                 nextPressed = false;
                 needHideProgress(false);
@@ -130,7 +130,7 @@ def patch_login(root: Path) -> int:
 
             final String virtualPhone = "+" + digits;
             nextPressed = true;
-            api.requestCode(virtualPhone, new NexusGramApiClient.Callback() {
+            api.requestCode(virtualPhone, new WaysGramApiClient.Callback() {
                 @Override
                 public void onSuccess(JSONObject response) {
                     nextPressed = false;
@@ -282,7 +282,7 @@ def patch_login(root: Path) -> int:
                     shakeWrongCode();
                     return;
                 }
-                NexusGramApiClient api = WaysGramApiRuntime.getClient();
+                WaysGramApiClient api = WaysGramApiRuntime.getClient();
                 if (api == null) {
                     nextPressed = false;
                     tryHideProgress(false, true);
@@ -291,7 +291,7 @@ def patch_login(root: Path) -> int:
                     return;
                 }
                 needShowProgress(0);
-                api.verifyCode(waysgramPhone, code, new NexusGramApiClient.Callback() {
+                api.verifyCode(waysgramPhone, code, new WaysGramApiClient.Callback() {
                     @Override
                     public void onSuccess(JSONObject response) {
                         nextPressed = false;
@@ -417,7 +417,7 @@ def patch_messages_controller(root: Path) -> int:
     changed = 0
     changed += add_imports(
         path,
-        "import app.nexusgram.network.NexusGramApiClient;\n"
+        "import app.nexusgram.network.WaysGramApiClient;\n"
         "import app.nexusgram.network.WaysGramApiRuntime;\n"
         "import app.nexusgram.network.WaysGramDataMapper;\n",
     )
@@ -438,13 +438,13 @@ def patch_messages_controller(root: Path) -> int:
             }
             loadingDialogs.put(folderId, true);
             getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
-            NexusGramApiClient api = WaysGramApiRuntime.getClient();
+            WaysGramApiClient api = WaysGramApiRuntime.getClient();
             if (api == null) {
                 loadingDialogs.put(folderId, false);
                 getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
                 return;
             }
-            api.getConversations(new NexusGramApiClient.Callback() {
+            api.getConversations(new WaysGramApiClient.Callback() {
                 @Override
                 public void onSuccess(org.json.JSONObject response) {
                     TLRPC.TL_messages_dialogsSlice dialogs = WaysGramDataMapper.dialogs(
@@ -495,7 +495,7 @@ def patch_messages_controller(root: Path) -> int:
                             NotificationCenter.loadingMessagesFailed, classGuid, null, unsupported);
                     return;
                 }
-                NexusGramApiClient api = WaysGramApiRuntime.getClient();
+                WaysGramApiClient api = WaysGramApiRuntime.getClient();
                 if (api == null) {
                     TLRPC.TL_error unavailable = new TLRPC.TL_error();
                     unavailable.code = 503;
@@ -506,7 +506,7 @@ def patch_messages_controller(root: Path) -> int:
                 }
                 long afterId = load_type == 2 ? Math.max(0, max_id) : 0;
                 long beforeId = load_type == 1 ? Math.max(0, max_id) : 0;
-                api.getMessages(dialogId, afterId, beforeId, new NexusGramApiClient.Callback() {
+                api.getMessages(dialogId, afterId, beforeId, new WaysGramApiClient.Callback() {
                     @Override
                     public void onSuccess(org.json.JSONObject response) {
                         TLRPC.User peerUser = getUser(dialogId);
@@ -518,7 +518,7 @@ def patch_messages_controller(root: Path) -> int:
                                     loaderLogger);
                             return;
                         }
-                        api.getUser(dialogId, new NexusGramApiClient.Callback() {
+                        api.getUser(dialogId, new WaysGramApiClient.Callback() {
                             @Override
                             public void onSuccess(org.json.JSONObject profile) {
                                 TLRPC.User loadedUser = WaysGramDataMapper.user(profile, false);
@@ -601,7 +601,7 @@ def patch_send_helper(root: Path) -> int:
     changed = 0
     changed += add_imports(
         path,
-        "import app.nexusgram.network.NexusGramApiClient;\n"
+        "import app.nexusgram.network.WaysGramApiClient;\n"
         "import app.nexusgram.network.WaysGramApiRuntime;\n"
         "import app.nexusgram.network.WaysGramDataMapper;\n",
     )
@@ -647,7 +647,7 @@ def patch_send_helper(root: Path) -> int:
                                 android.widget.Toast.LENGTH_LONG).show());
                 return;
             }
-            NexusGramApiClient api = WaysGramApiRuntime.getClient();
+            WaysGramApiClient api = WaysGramApiRuntime.getClient();
             if (api == null) {
                 AndroidUtilities.runOnUIThread(() ->
                         android.widget.Toast.makeText(ApplicationLoader.applicationContext,
@@ -656,7 +656,7 @@ def patch_send_helper(root: Path) -> int:
                 return;
             }
             final long selfId = UserConfig.getInstance(currentAccount).getClientUserId();
-            api.sendMessage(waysGramPeer, waysGramText, new NexusGramApiClient.Callback() {
+            api.sendMessage(waysGramPeer, waysGramText, new WaysGramApiClient.Callback() {
                 @Override
                 public void onSuccess(org.json.JSONObject response) {
                     TLRPC.TL_message message = WaysGramDataMapper.message(response, selfId, waysGramPeer);
