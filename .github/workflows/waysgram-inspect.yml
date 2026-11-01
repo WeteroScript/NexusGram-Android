@@ -39,23 +39,23 @@ jobs:
         run: |
           set -Eeuo pipefail
           out="$RUNNER_TEMP/waysgram-inspection"
-          mkdir -p "$out/files"
+          mkdir -p "$out/files" artifacts
           report="$out/inspection.txt"
           {
             echo "=== MANIFESTS ==="
             find . -path '*/build' -prune -o -name AndroidManifest.xml -print
             echo "=== LOGIN / AUTH CLASSES ==="
             find . -type f \( -iname '*login*' -o -iname '*phone*' -o -iname '*code*' \) \
-              -not -path '*/build/*' | sort | head -250
+              -not -path '*/build/*' | sort | sed -n '1,250p'
             echo "=== SETTINGS CLASSES ==="
             find . -type f \( -iname '*setting*' -o -iname '*preference*' \) \
-              -not -path '*/build/*' | sort | head -250
+              -not -path '*/build/*' | sort | sed -n '1,250p'
             echo "=== KEY CLASS DECLARATIONS ==="
             grep -RIl --include='*.java' -E 'class (SettingsActivity|LoginActivity|LaunchActivity|LoginOrView)' . \
-              --exclude-dir=build | sort | head -100
+              --exclude-dir=build | sort | sed -n '1,100p'
             echo "=== APP NAME RESOURCES ==="
             grep -RIn --include='strings.xml' -E 'app_name|AppName|Telegram' . \
-              --exclude-dir=build | head -180
+              --exclude-dir=build | sed -n '1,180p'
             echo "=== MODULES ==="
             find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.kts -o -name settings.gradle \) | sort
           } > "$report"
@@ -71,7 +71,6 @@ jobs:
 
           echo "=== SELECTED FILES ===" >> "$report"
           find "$out/files" -type f | sort >> "$report"
-          mkdir -p artifacts
           cp "$report" artifacts/inspection.txt
           (cd "$out" && zip -qr "$GITHUB_WORKSPACE/artifacts/WaysGram-UI-Source-Snapshot.zip" files)
           cat "$report"
