@@ -1,0 +1,23 @@
+[Unit]
+Description=WaysGram standalone backend
+After=network.target
+
+[Service]
+Type=simple
+User=nexusgram
+Group=nexusgram
+WorkingDirectory=/opt/nexusgram/WaysGram-Termux-Backend
+StateDirectory=nexusgram
+StateDirectoryMode=0750
+EnvironmentFile=/etc/nexusgram/nexusgram.env
+ExecStart=/usr/bin/python3 /opt/nexusgram/WaysGram-Termux-Backend/server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/nexusgram
+
+[Install]
+WantedBy=multi-user.target
