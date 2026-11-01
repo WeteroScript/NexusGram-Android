@@ -18,6 +18,7 @@ api_routes = (
     "/api/auth/verify-code",
     "/api/auth/logout",
     "/api/me",
+    "/api/profile",
     "/api/users",
     "/api/messages",
     "/api/conversations",
@@ -42,7 +43,7 @@ assert "setInstanceFollowRedirects(false)" in API, "Authenticated API requests m
 for marker in ("class User", "class Conversation", "class Message", "class Channel", "class ChannelMessage", "class Gift"):
     assert marker in MODELS, f"Missing typed model: {marker}"
 for marker in ("getConversations", "searchUsers", "getMessages", "sendMessage",
-               "getChannels", "getChannelMessages", "publishChannelMessage", "getGifts"):
+               "getChannels", "getChannelMessages", "publishChannelMessage", "getGifts", "updateProfile"):
     assert marker in DATA, f"Messaging repository is missing {marker}"
 assert "ConnectionsManager" not in DATA
 assert "TLRPC." not in DATA
