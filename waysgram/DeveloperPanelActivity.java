@@ -5,8 +5,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.view.Gravity;
 import android.view.View;
+import android.webkit.JsResult;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -88,6 +90,25 @@ public class DeveloperPanelActivity extends BaseFragment {
             settings.setSafeBrowsingEnabled(true);
         }
         webView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                if (getParentActivity() == null) {
+                    result.cancel();
+                    return true;
+                }
+                AlertDialog confirmation = new AlertDialog.Builder(getParentActivity())
+                        .setTitle("Подтверждение")
+                        .setMessage(message)
+                        .setNegativeButton("Отмена", (dialog, which) -> result.cancel())
+                        .setPositiveButton("Продолжить", (dialog, which) -> result.confirm())
+                        .create();
+                confirmation.setOnCancelListener(dialog -> result.cancel());
+                confirmation.show();
+                return true;
+            }
+        });
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
