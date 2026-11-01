@@ -342,15 +342,15 @@ class SendMessagesHelper {
         reference_ui = reference / "TMessagesProj/src/main/java/org/telegram/ui"
         reference_res = reference / "TMessagesProj/src/main/res"
         for screen in ("DialogsActivity.java", "ChatActivity.java", "MainTabsActivity.java"):
-            original_source = "public class " + screen.removesuffix(".java") + " {}\\n"
+            original_source = "public class " + screen.removesuffix(".java") + " {}\n"
             write(reference_ui / screen, original_source)
             write(source / "org/telegram/ui" / screen, original_source)
-        write(reference_ui / "LoginActivity.java", "public class LoginActivity { /* original */ }\\n")
-        write(reference_res / "layout/main.xml", "<LinearLayout />\\n")
-        write(root / "TMessagesProj/src/main/res/layout/main.xml", "<LinearLayout />\\n")
-        write(reference_res / "drawable/original.xml", "<shape />\\n")
-        write(root / "TMessagesProj/src/main/res/drawable/original.xml", "<shape />\\n")
-        write(reference_res / "values/strings.xml", "<resources><string name=\\"AppName\\">Telegram</string></resources>\\n")
+        write(reference_ui / "LoginActivity.java", "public class LoginActivity { /* original */ }\n")
+        write(reference_res / "layout/main.xml", "<LinearLayout />\n")
+        write(root / "TMessagesProj/src/main/res/layout/main.xml", "<LinearLayout />\n")
+        write(reference_res / "drawable/original.xml", "<shape />\n")
+        write(root / "TMessagesProj/src/main/res/drawable/original.xml", "<shape />\n")
+        write(reference_res / "values/strings.xml", "<resources><string name=\"AppName\">Telegram</string></resources>\n")
         verify = subprocess.run(
             [
                 sys.executable,
@@ -364,8 +364,8 @@ class SendMessagesHelper {
         )
         if verify.returncode:
             raise RuntimeError(
-                "verify_original_ui.py failed\\n"
-                + verify.stdout + "\\n" + verify.stderr
+                "verify_original_ui.py failed\n"
+                + verify.stdout + "\n" + verify.stderr
             )
 
         print("PASS: native UI, API configuration, shared runtime and native messenger patches are idempotent.")
