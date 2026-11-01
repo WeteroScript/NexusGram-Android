@@ -1,6 +1,6 @@
 # NexusGram
 
-NexusGram — Android-клиент на основе исходного проекта Telegram. Цель проекта — сохранить штатные экраны и навигацию Telegram, подключив их к единому WaysGram AuthBot backend.
+NexusGram — Android-клиент на основе исходного проекта Telegram. Цель проекта — сохранить штатные экраны и навигацию Telegram, постепенно подключая их к единому WaysGram AuthBot backend.
 
 ## Сборка APK
 
@@ -11,39 +11,47 @@ NexusGram — Android-клиент на основе исходного прое
 3. Нажми **Run workflow**.
 4. После успешного завершения скачай артефакт **NexusGram-APK**.
 
-Workflow собирает исходник из девяти частей `nexusgram.part01`–`nexusgram.part09`, восстанавливает Telegram source tree, применяет native UI patch v11, подготавливает API-конфигурацию и собирает APK.
+Workflow собирает исходник из девяти частей `nexusgram.part01`–`nexusgram.part09`, восстанавливает Telegram source tree, удаляет отдельный Portal/Test Backend UI, устанавливает REST-клиент и bridge для native login/text messaging, а затем собирает APK.
 
-Для подключения к развёрнутому AuthBot добавь в настройках GitHub-репозитория секрет **`WAYSGRAM_API_BASE_URL`** со значением HTTPS-адреса сервера без конечного пути API. Workflow передаёт его Gradle как manifest placeholder. Секрет не записывается в исходники. Без него APK может собраться, но вход WaysGram будет закрыт с сообщением о ненастроенном API. Перехода на авторизацию Telegram MTProto как запасного варианта нет.
+Для подключения к развёрнутому AuthBot добавь в настройках GitHub-репозитория секрет **`WAYSGRAM_API_BASE_URL`** со значением HTTPS-адреса сервера без конечного пути API. Workflow передаёт его Gradle как manifest placeholder. Секрет не записывается в исходники. Без него APK может собраться, но вход WaysGram будет закрыт с сообщением о ненастроенном API. Резервного перехода на Telegram MTProto для входа нет.
 
-## Сохранение оригинального интерфейса
+## Оригинальный интерфейс и native integration
 
-Скрипты `waysgram/apply_native_ui_v11.py` и `waysgram/configure_api_client.py` автоматически запускаются в Android workflow после восстановления исходников. Второй скрипт внедряет адрес сервера из build secret в Android Manifest и добавляет `WaysGramApiConfig` для получения настройки приложением. Третий скрипт устанавливает `WaysGramApiRuntime` и инициализирует один общий `NexusGramApiClient` из `ApplicationLoader`; native UI-классы получают его через `WaysGramApiRuntime.getClient()`. Он:
-- сохраняет штатный переход IntroActivity → LoginActivity;
-- удаляет отдельный WaysGram Portal CTA из LoginActivity;
-- снимает Portal/Home Activities с регистрации в Android Manifest и удаляет их Java-файлы после проверки, что на них нет внешних ссылок;
-- удаляет видимый переключатель `Test Backend` и его строковый ресурс;
-- проверяет, что исходный LoginActivity остаётся точкой входа.
+Все изменения применяются к штатным исходникам Telegram во время сборки. Внешний вид экранов не заменяется самодельными Portal/Home-страницами.
 
-Скрипт `waysgram/configure_api_client.py` устанавливает REST-клиент из `waysgram/NexusGramApiClient.java` и helper конфигурации в штатное дерево проекта. `waysgram/configure_api_runtime.py` подключает общий экземпляр в жизненный цикл приложения.
+- `apply_native_ui_v11.py` сохраняет переход IntroActivity → LoginActivity, удаляет WaysGram Portal CTA, Portal/Home Activity registration и видимый переключатель `Test Backend`.
+- `configure_api_client.py` устанавливает REST-клиент, читает HTTPS endpoint из build-time manifest metadata и добавляет `WaysGramApiConfig`.
+- `configure_api_runtime.py` инициализирует единый экземпляр `NexusGramApiClient` в `ApplicationLoader`.
+- `configure_native_messenger.py` подключает WaysGram REST к штатным `LoginActivity.PhoneView` / SMS code view, `MessagesController` и `SendMessagesHelper`.
+- `WaysGramDataMapper.java` переводит серверные профили, диалоги и текстовые сообщения в native Telegram TL-модели, чтобы штатные `DialogsActivity` и `ChatActivity` могли их отображать.
 
-Скрипт идемпотентен: повторное применение не меняет уже исправленные файлы. Он не перерисовывает штатные Telegram-экраны.
+Патчи идемпотентны. Отдельный workflow **WaysGram Android Patch Tests** проверяет их повторное применение на Python 3.11 и 3.12 без полной Android/NDK-сборки. Изменения в `waysgram/**` также запускают полную APK-сборку.
 
 ## Backend и текущий статус интеграции
 
 Единый серверный репозиторий: [WaysGram-AuthBot](https://github.com/WeteroScript/WaysGram-AuthBot).
 
-В AuthBot реализованы API авторизации через виртуальный номер и код из Telegram-бота, пользовательские сессии, профили, текстовые личные сообщения, каналы, внутренние Stars/Gram балансы и коллекционные подарки. Админ-панель находится только внутри Telegram-бота.
+В AuthBot реализованы API авторизации через виртуальный номер и код из Telegram-бота, пользовательские сессии, профили, текстовые личные сообщения, текстовые каналы, внутренние Stars/Gram балансы и коллекционные подарки. Админ-панель находится только внутри Telegram-бота.
 
-**Android-клиент пока не переведён полностью на этот API.** Native UI patch v11 исправляет навигацию и убирает отдельные Portal/Home-экраны, но сам по себе не меняет транспорт:
-- штатная авторизация LoginActivity пока использует Telegram MTProto;
-- список диалогов и история чата пока используют MessagesController;
-- отправка сообщений пока использует SendMessagesHelper;
-- медиа, синхронизация в реальном времени, push, групповые чаты и звонки ещё не перенесены в AuthBot REST API.
+**В Android уже подключён ограниченный native REST bridge:**
+- экран ввода виртуального номера отправляет запрос кода в AuthBot;
+- штатный экран ввода SMS-кода проверяет WaysGram OTP и получает API-сессию;
+- список диалогов загружается через `GET /api/conversations`;
+- история личного текстового диалога загружается через `GET /api/messages` с курсорами;
+- отправка обычного текстового личного сообщения идёт через `POST /api/messages`;
+- при отсутствии `WAYSGRAM_API_BASE_URL` вход закрывается с сообщением о конфигурации, а не переключается на Telegram MTProto.
 
-Следующий этап — подключить API AuthBot к существующим native views и заменить источники данных MessagesController/SendMessagesHelper, не меняя внешний интерфейс. До завершения этой миграции нельзя считать Android-приложение полностью независимым от Telegram MTProto.
+**Ограничения текущего bridge:**
+- только текстовые личные диалоги; вложения, фото, видео, документы, ответы, реакции и форматирование ещё не подключены;
+- групповые чаты, супергруппы и каналы пока не подключены к native UI;
+- фоновая синхронизация, push-уведомления, звонки и медиа-транспорт ещё используют отсутствующие или прежние интеграции;
+- настройки профиля, каталог и инвентарь подарков, кошелёк и управление каналами пока доступны в API, но ещё не все выведены в штатные Android-экраны;
+- на устройстве и в процессе приложения используется локальная native Telegram-модель пользователя для отображения интерфейса; полноценная замена всех MTProto-зависимостей ещё не завершена.
+
+Поэтому текущая стадия — частичная миграция авторизации и текстовых личных сообщений, а не полностью независимый от MTProto мессенджер.
 
 ## Исходники
 
-В репозитории хранятся части исходного архива и workflow восстановления. Скрипты автоматической подготовки находятся в `waysgram/`. Для них добавлен отдельный лёгкий workflow **WaysGram Android Patch Tests**, который проверяет повторяемость патчей на Python 3.11 и 3.12 без полной Android/NDK-сборки. Полная APK-сборка запускается вручную или при изменении исходных частей архива и основного workflow.
+В репозитории хранятся части исходного архива Telegram и repeatable patch scripts в `waysgram/`. Полная Android-сборка выполняется GitHub Actions с восстановлением исходников и сборкой native-библиотек.
 
 Перед распространением APK необходимо проверить лицензии исходного проекта и используемых компонентов.
