@@ -8,8 +8,10 @@ PANEL_SOURCE = Path(__file__).with_name("DeveloperPanelActivity.java")
 PANEL_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java"
 API_SOURCE = Path(__file__).with_name("WaysGramApiClient.java")
 API_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramApiClient.java"
+SESSION_SOURCE = Path(__file__).with_name("WaysGramSessionStore.java")
+SESSION_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramSessionStore.java"
 
-for required in (SETTINGS, PANEL_SOURCE, API_SOURCE):
+for required in (SETTINGS, PANEL_SOURCE, API_SOURCE, SESSION_SOURCE):
     if not required.is_file():
         raise SystemExit(f"Missing required WaysGram integration file: {required}")
 
@@ -23,6 +25,15 @@ api_contract = (
 missing = [marker for marker in api_contract if marker not in api_source]
 if missing:
     raise SystemExit("WaysGram REST client contract is incomplete: " + ", ".join(missing))
+
+session_source = SESSION_SOURCE.read_text(encoding="utf-8")
+session_contract = (
+    "AndroidKeyStore", "AES/GCM/NoPadding", "saveAccessToken",
+    "getAccessToken", "clear", "GCMParameterSpec",
+)
+missing = [marker for marker in session_contract if marker not in session_source]
+if missing:
+    raise SystemExit("WaysGram session storage contract is incomplete: " + ", ".join(missing))
 
 source = SETTINGS.read_text(encoding="utf-8")
 old_entry = '''        items.add(UItem.asShadow(null));
@@ -50,4 +61,6 @@ PANEL_TARGET.parent.mkdir(parents=True, exist_ok=True)
 PANEL_TARGET.write_text(PANEL_SOURCE.read_text(encoding="utf-8"), encoding="utf-8")
 API_TARGET.parent.mkdir(parents=True, exist_ok=True)
 API_TARGET.write_text(api_source, encoding="utf-8")
-print("WaysGram admin panel and REST transport injected into original Android project")
+SESSION_TARGET.parent.mkdir(parents=True, exist_ok=True)
+SESSION_TARGET.write_text(session_source, encoding="utf-8")
+print("WaysGram admin panel, REST transport and Keystore session storage injected")
