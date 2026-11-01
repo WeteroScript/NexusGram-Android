@@ -32,7 +32,7 @@ def run(script: Path, root: Path) -> None:
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="nexusgram-patch-test-") as temp:
+    with tempfile.TemporaryDirectory(prefix="waysgram-patch-test-") as temp:
         root = Path(temp)
         source = root / "TMessagesProj/src/main/java"
         waysgram = root / "waysgram"
@@ -86,6 +86,7 @@ void createLogin(Context context) {
         write(
             root / "TMessagesProj/src/main/res/values/strings.xml",
             "<resources>\n"
+            "    <string name=\"AppName\">Telegram</string>\n"
             "    <string name=\"DebugTestBackend\">Test Backend</string>\n"
             "</resources>\n",
         )
@@ -300,6 +301,7 @@ class SendMessagesHelper {
         assert "WaysGramPortalActivity" not in manifest
         assert "WaysGramHomeActivity" not in manifest
         assert "DebugTestBackend" not in strings
+        assert '<string name="AppName">WaysGram</string>' in strings
         assert "app.nexusgram.API_BASE_URL" in manifest
         assert "waysgramApiBaseUrl" in gradle
         assert "WaysGramApiRuntime.initialize(applicationContext);" in app_loader
