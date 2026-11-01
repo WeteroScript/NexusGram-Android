@@ -67,6 +67,7 @@ jobs:
           set -Eeuo pipefail
           python3 waysgram/apply_native_ui_v11.py --root .
           python3 waysgram/configure_api_client.py --root .
+          python3 waysgram/configure_api_runtime.py --root .
 
       - name: Verify required Android source files
         shell: bash
