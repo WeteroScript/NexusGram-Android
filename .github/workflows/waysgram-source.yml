@@ -9,6 +9,7 @@ on:
       - 'release/nexusgram-v4.patch.xz.b64'
       - 'release/nexusgram-v5.patch.xz.b64'
       - '.github/workflows/waysgram-source.yml'
+      - 'waysgram/**'
 
 permissions:
   contents: read
@@ -35,6 +36,12 @@ jobs:
           unzip -q "$RUNNER_TEMP/original-source.zip" -d "$RUNNER_TEMP/original"
           test -d "$RUNNER_TEMP/original/Telegram-master"
           rsync -a --exclude='.git/' "$RUNNER_TEMP/original/Telegram-master/" "$GITHUB_WORKSPACE/"
+
+      - name: Inject WaysGram admin panel into original Settings
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 waysgram/apply_android_patch.py
 
       - name: Restore WaysGram backend
         shell: bash
@@ -96,17 +103,7 @@ jobs:
           if old_service.exists():
               old_service.replace(new_service)
 
-          login = Path("TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java")
-          source = login.read_text(encoding="utf-8")
-          pattern = re.compile(r'(\.append\(")(.*?)(?="\))', re.DOTALL)
-          repaired, count = pattern.subn(
-              lambda match: match.group(1) + match.group(2).replace("\n", r"\n"),
-              source,
-          )
-          if count == 0:
-              raise SystemExit("Expected original DeveloperPanelActivity string-literal repair did not match")
-          login.write_text(repaired, encoding="utf-8")
-          print(f"Branding updated in {changed} localized resource files; repaired {count} Java literals")
+          print(f"Branding updated in {changed} localized resource files")
           PY
 
           test ! -e TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
