@@ -65,7 +65,7 @@ void createLogin(Context context) {
             """<manifest><application>
 <activity android:name="app.nexusgram.ui.WaysGramPortalActivity" />
 <activity android:name="app.nexusgram.ui.WaysGramHomeActivity" />
-<!-- usesCleartextTraffic for browser supporting opening http:// links -->
+        <!-- usesCleartextTraffic for browser supporting opening http:// links -->
 </application></manifest>
 """,
         )
