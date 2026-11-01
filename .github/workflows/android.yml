@@ -1,4 +1,4 @@
-name: NexusGram Android APK
+name: WaysGram Android APK
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
       WAYSGRAM_API_BASE_URL: ${{ secrets.WAYSGRAM_API_BASE_URL }}
 
     steps:
-      - name: Checkout NexusGram archive parts
+      - name: Checkout WaysGram source archive parts
         uses: actions/checkout@v4
 
       - name: Install host build dependencies
@@ -37,7 +37,7 @@ jobs:
             libclang-dev libtool-bin meson nasm ninja-build \
             perl pkg-config python3 rsync unzip yasm
 
-      - name: Reassemble NexusGram source archive
+      - name: Reassemble WaysGram source archive
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -351,7 +351,7 @@ jobs:
             echo "[OK] ${abi}: all static libraries exist"
           done
 
-      - name: Configure Firebase for NexusGram
+      - name: Configure Firebase for WaysGram
         shell: bash
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
@@ -392,7 +392,7 @@ jobs:
           print(f"Firebase configuration verified for {expected}")
           PY
 
-      - name: Build NexusGram APK
+      - name: Build WaysGram APK
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -408,10 +408,10 @@ jobs:
             -PwaysgramApiBaseUrl="${WAYSGRAM_API_BASE_URL:-}" \
             :TMessagesProj_App:assembleAfatRelease
 
-      - name: Upload NexusGram APK
+      - name: Upload WaysGram APK
         uses: actions/upload-artifact@v4
         with:
-          name: NexusGram-APK
+          name: WaysGram-APK
           path: TMessagesProj_App/build/outputs/apk/afat/release/*.apk
           if-no-files-found: error
           retention-days: 14
