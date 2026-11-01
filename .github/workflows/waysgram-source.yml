@@ -79,13 +79,22 @@ jobs:
           if changed == 0:
               raise SystemExit("No AppName resources were changed")
 
-          for relative in ("WaysGram-Backend/server.py", "WaysGram-Backend/README_RU.txt", "WaysGram-Backend/static/admin.html"):
-              path = Path(relative)
-              if path.exists():
-                  value = path.read_text(encoding="utf-8")
-                  value = value.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
-                  value = value.replace('ROOT / "nexusgram.db"', 'ROOT / "waysgram.db"')
+          backend = Path("WaysGram-Backend")
+          text_suffixes = {".py", ".txt", ".html", ".md", ".sh", ".example", ".service", ".json", ".yml", ".yaml"}
+          for path in backend.rglob("*"):
+              if not path.is_file() or path.suffix not in text_suffixes:
+                  continue
+              value = path.read_text(encoding="utf-8")
+              value = value.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
+              value = value.replace("nexusgram.db", "waysgram.db")
+              value = value.replace("/opt/nexusgram/NexusGram-Termux-Backend", "/opt/waysgram/WaysGram-Backend")
+              if value != path.read_text(encoding="utf-8"):
                   path.write_text(value, encoding="utf-8")
+
+          old_service = backend / "deploy" / "nexusgram.service.example"
+          new_service = backend / "deploy" / "waysgram.service.example"
+          if old_service.exists():
+              old_service.replace(new_service)
 
           login = Path("TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java")
           source = login.read_text(encoding="utf-8")
