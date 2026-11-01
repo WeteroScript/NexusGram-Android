@@ -65,9 +65,9 @@ def main() -> int:
             expected = old.read_bytes()
             if path == Path("DeveloperPanelActivity.java"):
                 original_text = expected.decode("utf-8")
-                pattern = re.compile(r'(\\.append\\(")(.*?)(?="\\))', re.DOTALL)
+                pattern = re.compile(r'(\.append\(")(.*?)(?="\))', re.DOTALL)
                 repaired, count = pattern.subn(
-                    lambda match: match.group(1) + match.group(2).replace("\\n", r"\\n"),
+                    lambda match: match.group(1) + match.group(2).replace("\n", r"\n"),
                     original_text,
                 )
                 if count == 0:
