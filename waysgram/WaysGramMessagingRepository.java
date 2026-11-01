@@ -80,6 +80,22 @@ public final class WaysGramMessagingRepository {
         withSession(callback, token -> api.sendMessage(token, recipientId, body, jsonCallback(callback)));
     }
 
+    public void updateProfile(String username, String displayName, Callback<JSONObject> callback) {
+        if (username == null && displayName == null) {
+            fail(callback, 400, "Укажите username или отображаемое имя");
+            return;
+        }
+        if (username != null && !username.matches("[A-Za-z][A-Za-z0-9_]{0,31}")) {
+            fail(callback, 400, "Username: 1–32 символа, латиница, цифры и _, первый символ — буква");
+            return;
+        }
+        if (displayName != null && displayName.trim().length() > 60) {
+            fail(callback, 400, "Имя профиля слишком длинное");
+            return;
+        }
+        withSession(callback, token -> api.updateProfile(token, username, displayName, jsonCallback(callback)));
+    }
+
     public void getChannels(Callback<List<WaysGramModels.Channel>> callback) {
         withSession(callback, token -> api.getChannels(token, listCallback(
                 "channels", WaysGramModels.Channel::new, callback)));
