@@ -36,6 +36,7 @@ assert "new TLRPC.TL_auth_signIn" not in AUTH
 assert "AndroidKeyStore" in SESSION
 assert "AES/GCM/NoPadding" in SESSION
 assert "GCMParameterSpec" in SESSION
+assert "setInstanceFollowRedirects(false)" in API, "Authenticated API requests must not follow redirects"
 
 # Data types are explicitly WaysGram-owned and repository code has no MTProto dependency.
 for marker in ("class User", "class Conversation", "class Message", "class Channel", "class ChannelMessage", "class Gift"):
