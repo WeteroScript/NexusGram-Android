@@ -1,0 +1,138 @@
+name: WaysGram Source ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'nexusgram.part*'
+      - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
+      - 'release/nexusgram-v4.patch.xz.b64'
+      - 'release/nexusgram-v5.patch.xz.b64'
+      - '.github/workflows/waysgram-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore original Android source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          parts=(nexusgram.part*)
+          if (( ${#parts[@]} != 9 )); then
+            echo "::error::Expected 9 original Android source parts, found ${#parts[@]}"
+            exit 1
+          fi
+          cat "${parts[@]}" > "$RUNNER_TEMP/original-source.zip"
+          unzip -q "$RUNNER_TEMP/original-source.zip" -d "$RUNNER_TEMP/original"
+          test -d "$RUNNER_TEMP/original/Telegram-master"
+          rsync -a --exclude='.git/' "$RUNNER_TEMP/original/Telegram-master/" "$GITHUB_WORKSPACE/"
+
+      - name: Restore WaysGram backend
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          parts=(release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*)
+          if (( ${#parts[@]} != 15 )); then
+            echo "::error::Expected 15 backend source parts, found ${#parts[@]}"
+            exit 1
+          fi
+          cat "${parts[@]}" | base64 --decode > "$RUNNER_TEMP/backend.tar.xz"
+          xz --test "$RUNNER_TEMP/backend.tar.xz"
+          mkdir -p "$RUNNER_TEMP/backend"
+          tar -xJf "$RUNNER_TEMP/backend.tar.xz" -C "$RUNNER_TEMP/backend"
+          for version in v4 v5; do
+            base64 --decode "release/nexusgram-${version}.patch.xz.b64" > "$RUNNER_TEMP/${version}.patch.xz"
+            xz --test "$RUNNER_TEMP/${version}.patch.xz"
+            xz --decompress --stdout "$RUNNER_TEMP/${version}.patch.xz" | patch --directory="$RUNNER_TEMP/backend" --strip=1
+          done
+          test -s "$RUNNER_TEMP/backend/NexusGram-Termux-Backend/server.py"
+          rm -rf WaysGram-Backend
+          cp -a "$RUNNER_TEMP/backend/NexusGram-Termux-Backend" WaysGram-Backend
+
+      - name: Apply WaysGram app branding and source fixes
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          resources = Path("TMessagesProj/src/main/res")
+          changed = 0
+          for path in resources.rglob("strings.xml"):
+              original = path.read_text(encoding="utf-8")
+              updated = re.sub(r'(<string\\s+name="AppName">).*?(</string>)', r'\\1WaysGram\\2', original, count=1)
+              updated = re.sub(r'(<string\\s+name="AppNameBeta">).*?(</string>)', r'\\1WaysGram Beta\\2', updated, count=1)
+              if updated != original:
+                  path.write_text(updated, encoding="utf-8")
+                  changed += 1
+          if changed == 0:
+              raise SystemExit("No AppName resources were changed")
+
+          for relative in ("WaysGram-Backend/server.py", "WaysGram-Backend/README_RU.txt", "WaysGram-Backend/static/admin.html"):
+              path = Path(relative)
+              if path.exists():
+                  value = path.read_text(encoding="utf-8")
+                  value = value.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
+                  path.write_text(value, encoding="utf-8")
+
+          login = Path("TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java")
+          source = login.read_text(encoding="utf-8")
+          pattern = re.compile(r'(\\.append\\(")(.*?)(?="\\))', re.DOTALL)
+          repaired, count = pattern.subn(
+              lambda match: match.group(1) + match.group(2).replace("\\n", r"\\n"),
+              source,
+          )
+          if count == 0:
+              raise SystemExit("Expected original DeveloperPanelActivity string-literal repair did not match")
+          login.write_text(repaired, encoding="utf-8")
+          print(f"Branding updated in {changed} localized resource files; repaired {count} Java literals")
+          PY
+
+          test ! -e TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
+          ! grep -q 'app.nexusgram.standalone.MainActivity' TMessagesProj_App/src/main/AndroidManifest.xml
+
+      - name: Create WaysGram source archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+
+          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
+          output = Path("WaysGram-Source.zip")
+          with ZipFile(output, "w", ZIP_DEFLATED, compresslevel=5) as archive:
+              for path in Path(".").rglob("*"):
+                  if not path.is_file():
+                      continue
+                  rel = path.relative_to(".")
+                  if any(part in excluded for part in rel.parts):
+                      continue
+                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
+                      continue
+                  if rel.parts and rel.parts[0] == "release":
+                      continue
+                  archive.write(path, rel.as_posix())
+          if output.stat().st_size < 1024 * 1024:
+              raise SystemExit("WaysGram source archive size is unexpectedly small")
+          print(f"WaysGram-Source.zip: {output.stat().st_size} bytes")
+          PY
+
+      - name: Upload WaysGram source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WaysGram-Source-ZIP
+          path: WaysGram-Source.zip
+          if-no-files-found: error
+          retention-days: 14
