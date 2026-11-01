@@ -318,8 +318,12 @@ class SendMessagesHelper {
         sender = (source / "org/telegram/messenger/SendMessagesHelper.java").read_text(encoding="utf-8")
         assert "api.getConversations(" in controller
         assert "finishWaysGramMessages(" in controller
+        assert controller.count("WaysGramApiRuntime.isWaysGramMode()") == 2
+        assert "isSignedIn()" not in controller
         assert "api.sendMessage(waysGramPeer" in sender
         assert "WaysGramDataMapper.message(response" in sender
+        assert "WaysGramApiRuntime.isWaysGramMode()" in sender
+        assert "isSignedIn()" not in sender
         assert "waysgramMode" in login
         assert not (source / "app/nexusgram/ui/WaysGramPortalActivity.java").exists()
         assert not (source / "app/nexusgram/ui/WaysGramHomeActivity.java").exists()
