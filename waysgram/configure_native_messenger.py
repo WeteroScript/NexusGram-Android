@@ -145,8 +145,13 @@ def patch_login(root: Path) -> int:
         raise RuntimeError("LoginActivitySmsView declaration not found")
     source = login.read_text(encoding="utf-8")
     class_index = source.index(sms_class_start)
+    class_end_marker = "\\n    public class LoadingTextView"
+    class_end = source.find(class_end_marker, class_index)
+    if class_end < 0:
+        raise RuntimeError("Could not locate the end of LoginActivitySmsView")
     before = source[:class_index]
-    sms = source[class_index:]
+    sms = source[class_index:class_end]
+    after = source[class_end:]
 
     field_anchor = "        private boolean nextPressed;\n        private String lastError = \"\";\n"
     field_replacement = field_anchor + (
@@ -310,7 +315,7 @@ def patch_login(root: Path) -> int:
     )
 
     before = source[:class_index]
-    source = before + sms
+    source = before + sms + after
     source = insert_outer_waysgram_success(source)
     login.write_text(source, encoding="utf-8")
     return changed
