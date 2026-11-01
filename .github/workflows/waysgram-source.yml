@@ -71,8 +71,8 @@ jobs:
           changed = 0
           for path in resources.rglob("strings.xml"):
               original = path.read_text(encoding="utf-8")
-              updated = re.sub(r'(<string\\s+name="AppName">).*?(</string>)', r'\\1WaysGram\\2', original, count=1)
-              updated = re.sub(r'(<string\\s+name="AppNameBeta">).*?(</string>)', r'\\1WaysGram Beta\\2', updated, count=1)
+              updated = re.sub(r'(<string\s+name="AppName">).*?(</string>)', r'\1WaysGram\2', original, count=1)
+              updated = re.sub(r'(<string\s+name="AppNameBeta">).*?(</string>)', r'\1WaysGram Beta\2', updated, count=1)
               if updated != original:
                   path.write_text(updated, encoding="utf-8")
                   changed += 1
@@ -88,9 +88,9 @@ jobs:
 
           login = Path("TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java")
           source = login.read_text(encoding="utf-8")
-          pattern = re.compile(r'(\\.append\\(")(.*?)(?="\\))', re.DOTALL)
+          pattern = re.compile(r'(\.append\(")(.*?)(?="\))', re.DOTALL)
           repaired, count = pattern.subn(
-              lambda match: match.group(1) + match.group(2).replace("\\n", r"\\n"),
+              lambda match: match.group(1) + match.group(2).replace("\n", r"\n"),
               source,
           )
           if count == 0:
