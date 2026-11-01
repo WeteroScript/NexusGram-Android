@@ -340,6 +340,7 @@ class SendMessagesHelper {
 
         reference = root / "Telegram-master"
         reference_ui = reference / "TMessagesProj/src/main/java/org/telegram/ui"
+        write(reference_ui / "IntroActivity.java", "new LoginActivity().setIntroView(frameContainerView, startMessagingButton);\\n")
         reference_res = reference / "TMessagesProj/src/main/res"
         for screen in ("DialogsActivity.java", "ChatActivity.java", "MainTabsActivity.java"):
             original_source = "public class " + screen.removesuffix(".java") + " {}\n"
