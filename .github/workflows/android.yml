@@ -1,4 +1,4 @@
-name: NexusGram Android APK
+name: WaysGram Android APK
 # Standalone client integration validation pass
 
 on:
@@ -92,137 +92,97 @@ jobs:
             echo "[OK] $file"
           done
 
-      - name: Integrate independent NexusGram client into the existing APK
+      - name: Apply WaysGram branding and prepare the backend source
         shell: bash
         run: |
           set -Eeuo pipefail
           shopt -s nullglob
           parts=(release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*)
           if (( ${#parts[@]} != 15 )); then
-            echo "::error::Expected 15 standalone bundle segments, found ${#parts[@]}"
+            echo "::error::Expected 15 backend source segments, found ${#parts[@]}"
             exit 1
           fi
 
-          mkdir -p "$RUNNER_TEMP/nexusgram-standalone"
-          cat "${parts[@]}" | base64 --decode > "$RUNNER_TEMP/nexusgram-standalone.tar.xz"
-          xz --test "$RUNNER_TEMP/nexusgram-standalone.tar.xz"
-          tar -xJf "$RUNNER_TEMP/nexusgram-standalone.tar.xz" -C "$RUNNER_TEMP/nexusgram-standalone"
-          base64 --decode release/nexusgram-v4.patch.xz.b64 > "$RUNNER_TEMP/nexusgram-v4.patch.xz"
-          xz --test "$RUNNER_TEMP/nexusgram-v4.patch.xz"
-          xz --decompress --stdout "$RUNNER_TEMP/nexusgram-v4.patch.xz" | patch --directory="$RUNNER_TEMP/nexusgram-standalone" --strip=1
-          base64 --decode release/nexusgram-v5.patch.xz.b64 > "$RUNNER_TEMP/nexusgram-v5.patch.xz"
-          xz --test "$RUNNER_TEMP/nexusgram-v5.patch.xz"
-          xz --decompress --stdout "$RUNNER_TEMP/nexusgram-v5.patch.xz" | patch --directory="$RUNNER_TEMP/nexusgram-standalone" --strip=1
+          mkdir -p "$RUNNER_TEMP/waysgram-bundle"
+          cat "${parts[@]}" | base64 --decode > "$RUNNER_TEMP/waysgram-bundle.tar.xz"
+          xz --test "$RUNNER_TEMP/waysgram-bundle.tar.xz"
+          tar -xJf "$RUNNER_TEMP/waysgram-bundle.tar.xz" -C "$RUNNER_TEMP/waysgram-bundle"
+          base64 --decode release/nexusgram-v4.patch.xz.b64 > "$RUNNER_TEMP/waysgram-v4.patch.xz"
+          xz --test "$RUNNER_TEMP/waysgram-v4.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/waysgram-v4.patch.xz" | patch --directory="$RUNNER_TEMP/waysgram-bundle" --strip=1
+          base64 --decode release/nexusgram-v5.patch.xz.b64 > "$RUNNER_TEMP/waysgram-v5.patch.xz"
+          xz --test "$RUNNER_TEMP/waysgram-v5.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/waysgram-v5.patch.xz" | patch --directory="$RUNNER_TEMP/waysgram-bundle" --strip=1
 
+          test -s "$RUNNER_TEMP/waysgram-bundle/NexusGram-Termux-Backend/server.py"
+          rm -rf WaysGram-Backend
+          cp -a "$RUNNER_TEMP/waysgram-bundle/NexusGram-Termux-Backend" WaysGram-Backend
 
-          source_root="$RUNNER_TEMP/nexusgram-standalone/android-standalone/app/src/main/java/app/nexusgram"
-          test -s "$source_root/MainActivity.java"
-          test -s "$source_root/network/NexusGramApiClient.java"
-          target_root="TMessagesProj_App/src/main/java/app/nexusgram/standalone"
-          mkdir -p "$target_root/network"
-
-          python3 - "$source_root" "$target_root" <<'PY'
-          from pathlib import Path
-          import sys
-
-          source_root = Path(sys.argv[1])
-          target_root = Path(sys.argv[2])
-          activity = (source_root / "MainActivity.java").read_text()
-          api = (source_root / "network" / "NexusGramApiClient.java").read_text()
-
-          activity = activity.replace(
-              "package app.nexusgram;",
-              "package app.nexusgram.standalone;",
-              1,
-          ).replace(
-              "import app.nexusgram.network.NexusGramApiClient;",
-              "import app.nexusgram.standalone.network.NexusGramApiClient;",
-              1,
-          )
-          api = api.replace(
-              "package app.nexusgram.network;",
-              "package app.nexusgram.standalone.network;",
-              1,
-          )
-          if "package app.nexusgram.standalone;" not in activity:
-              raise SystemExit("Failed to relocate NexusGram Activity package")
-          if "package app.nexusgram.standalone.network;" not in api:
-              raise SystemExit("Failed to relocate NexusGram API client package")
-
-          (target_root / "MainActivity.java").write_text(activity)
-          (target_root / "network" / "NexusGramApiClient.java").write_text(api)
-          print("Integrated standalone NexusGram Activity and REST client")
-          PY
-
-          manifest="TMessagesProj_App/src/main/AndroidManifest.xml"
-          if [[ ! -f "$manifest" ]]; then
-            echo "::error::Expected app manifest not found: $manifest"
-            exit 1
-          fi
-
-          python3 - "$manifest" <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
           import re
-          import sys
 
-          path = Path(sys.argv[1])
-          xml = path.read_text()
-          activity_name = "app.nexusgram.standalone.MainActivity"
-          if activity_name in xml:
-              print("NexusGram standalone Activity is already registered")
-              raise SystemExit(0)
+          # Keep all Android layouts, resources other than the app label, and activity
+          # registrations intact. Only the visible product name changes.
+          res = Path("TMessagesProj/src/main/res")
+          updated = 0
+          for path in res.rglob("strings.xml"):
+              source = path.read_text(encoding="utf-8")
+              new = re.sub(r'(<string\s+name="AppName">).*?(</string>)', r'\1WaysGram\2', source, count=1)
+              new = re.sub(r'(<string\s+name="AppNameBeta">).*?(</string>)', r'\1WaysGram Beta\2', new, count=1)
+              if new != source:
+                  path.write_text(new, encoding="utf-8")
+                  updated += 1
+          if updated == 0:
+              raise SystemExit("No AppName resources were updated")
+          print(f"Updated WaysGram branding in {updated} localized strings.xml files")
 
-          if not re.search(r'<application\b[^>]*>', xml, re.DOTALL):
-              raise SystemExit("Could not locate application element in manifest")
-
-          if "android.permission.INTERNET" not in xml:
-              app_start = re.search(r'<application\b', xml)
-              if not app_start:
-                  raise SystemExit("Could not locate application element for INTERNET permission")
-              permission = '    <uses-permission android:name="android.permission.INTERNET" />\n'
-              xml = xml[:app_start.start()] + permission + xml[app_start.start():]
-
-          app_match = re.search(r'<application\b[^>]*>', xml, re.DOTALL)
-          app_tag = app_match.group(0)
-          if "android:usesCleartextTraffic" not in app_tag:
-              updated_tag = app_tag[:-1] + ' android:usesCleartextTraffic="true">'
-          else:
-              updated_tag = re.sub(
-                  r'android:usesCleartextTraffic="[^"]*"',
-                  'android:usesCleartextTraffic="true"',
-                  app_tag,
-                  count=1,
-              )
-          xml = xml[:app_match.start()] + updated_tag + xml[app_match.end():]
-
-          launcher = '''
-              <activity
-                  android:name="app.nexusgram.standalone.MainActivity"
-                  android:label="NexusGram Independent"
-                  android:exported="true"
-                  android:configChanges="orientation|screenSize|keyboardHidden">
-                  <intent-filter>
-                      <action android:name="android.intent.action.MAIN" />
-                      <category android:name="android.intent.category.LAUNCHER" />
-                  </intent-filter>
-              </activity>
-          '''
-          if "</application>" not in xml:
-              raise SystemExit("Could not locate application closing tag")
-          xml = xml.replace("</application>", launcher + "\n</application>", 1)
-          path.write_text(xml)
-          print("Registered the second launcher entry: NexusGram Independent")
+          # Brand backend-facing labels without changing environment variable names
+          # or data/API behavior, preserving deployment compatibility.
+          for relative in ("WaysGram-Backend/server.py", "WaysGram-Backend/README_RU.txt", "WaysGram-Backend/static/admin.html"):
+              path = Path(relative)
+              if path.exists():
+                  text = path.read_text(encoding="utf-8")
+                  text = text.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
+                  path.write_text(text, encoding="utf-8")
           PY
 
-          test -s TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
-          test -s TMessagesProj_App/src/main/java/app/nexusgram/standalone/network/NexusGramApiClient.java
-          grep -q 'app.nexusgram.standalone.MainActivity' "$manifest"
-          python3 - "$manifest" <<'PY'
-          import sys
-          import xml.etree.ElementTree as ET
-          ET.parse(sys.argv[1])
-          print("Android manifest XML is valid")
+          test ! -e TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
+          if grep -Rqs 'app.nexusgram.standalone.MainActivity' TMessagesProj_App/src/main/AndroidManifest.xml; then
+            echo "::error::Standalone launcher registration unexpectedly remains"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+
+          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
+          with ZipFile("WaysGram-Source.zip", "w", ZIP_DEFLATED, compresslevel=5) as archive:
+              for path in Path(".").rglob("*"):
+                  if not path.is_file():
+                      continue
+                  rel = path.relative_to(".")
+                  if any(part in excluded for part in rel.parts):
+                      continue
+                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
+                      continue
+                  if rel.parts and rel.parts[0] == "release":
+                      continue
+                  archive.write(path, rel.as_posix())
+          size = Path("WaysGram-Source.zip").stat().st_size
+          if size < 1024 * 1024:
+              raise SystemExit(f"Source archive is unexpectedly small: {size} bytes")
+          print(f"Created WaysGram-Source.zip ({size} bytes)")
           PY
+
+      - name: Upload WaysGram source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WaysGram-Source-ZIP
+          path: WaysGram-Source.zip
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Repair malformed Java string literals
         shell: bash
@@ -513,7 +473,7 @@ jobs:
           print(f"Firebase configuration verified for {expected}")
           PY
 
-      - name: Build NexusGram APK
+      - name: Build WaysGram APK
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -525,10 +485,10 @@ jobs:
             --max-workers=2 \
             :TMessagesProj_App:assembleAfatRelease
 
-      - name: Upload NexusGram APK
+      - name: Upload WaysGram APK
         uses: actions/upload-artifact@v4
         with:
-          name: NexusGram-APK
+          name: WaysGram-APK
           path: TMessagesProj_App/build/outputs/apk/afat/release/*.apk
           if-no-files-found: error
           retention-days: 14

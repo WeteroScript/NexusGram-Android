@@ -1,52 +1,27 @@
-# NexusGram
+# WaysGram
 
-NexusGram — Android-мессенджер с Telegram-derived клиентом и отдельным собственным REST backend.
+WaysGram is a rebranded build of the original Android client with the original UI and navigation preserved.
 
-## Состав проекта
+## Current branch state
 
-- Существующий Telegram-derived Android-клиент и его прежняя сборка сохраняются.
-- Самостоятельный Android-клиент NexusGram использует REST API: вход по номеру, профиль, поиск пользователей, личные сообщения, список последних диалогов, ручное обновление переписки, чтение каналов и публикации владельца, каталог подарков.
-- Backend содержит авторизацию по SMS-коду, профили, последние диалоги, личные сообщения, каналы, каталог подарков, Stars и административную панель.
-- Исходный комплект v3 находится в `release/` в виде сегментированного tar.xz-архива. Инструкция: [NEXUSGRAM_SOURCE_BUNDLE_RU.md](NEXUSGRAM_SOURCE_BUNDLE_RU.md).
+- The standalone second launcher and standalone MainActivity are not included in the WaysGram APK build.
+- The original LoginActivity, LaunchActivity, SettingsActivity and existing screens are retained.
+- The visible app name is changed to WaysGram in localized resources.
+- The WaysGram backend source is included in the source archive and can be deployed separately to a VDS.
+- The existing Settings entry for the developer panel is retained.
 
-## Интеграция Android-клиента
+## Important integration status
 
-Workflow `NexusGram Android APK` восстанавливает существующий Telegram-derived проект и добавляет в его APK самостоятельную Activity:
+This branch is a UI-preserving rebrand and source packaging step. It is **not yet a completed migration of Telegram's MTProto services to the WaysGram VDS**. The existing original login, message transport and other Telegram-backed functions still require a separate, feature-by-feature migration to the WaysGram API before user data can be considered VDS-only.
 
-- оригинальная Activity остаётся основной;
-- появляется дополнительный значок запуска **NexusGram Independent**;
-- новая Activity использует отдельный REST API-клиент и не заменяет Telegram/MTProto-часть;
-- backend подключается по адресу, указанному на экране входа.
+The bot must not relay arbitrary third-party SMS verification codes. A safe WaysGram login flow can issue its own one-time login code to a Telegram account explicitly linked and verified by the user.
 
-Это интеграция двух интерфейсов в один APK, но не миграция Telegram-аккаунтов, истории Telegram-чатов или MTProto на новый backend. Учётные записи и сообщения NexusGram создаются отдельно.
+The admin password must be configured on the VDS as an environment secret; it must not be committed to this public repository or embedded in the APK.
 
-## Сборка
+## Build outputs
 
-В GitHub Actions доступны два workflow:
+GitHub Actions workflow **WaysGram Android APK** builds:
+- `WaysGram-APK` — original Android client, with original UI preserved and product name changed.
+- `WaysGram-Source-ZIP` — restored Android source tree plus the WaysGram backend source.
 
-- `NexusGram Android APK` — собирает основной Telegram-derived APK и добавляет в него самостоятельный REST-клиент как второй экран запуска. Артефакт: `NexusGram-APK`.
-- `NexusGram Standalone Android APK` — собирает самостоятельный APK без Telegram SDK/MTProto. Артефакт: `NexusGram-Standalone-APK`.
-
-Оба APK являются тестовыми сборками. Перед публикацией необходимо провести аудит безопасности, проверить лицензии используемых компонентов и подготовить production-подпись.
-
-## Backend и production
-
-Backend запускается в Termux для локального тестирования или на VDS. Android-клиент обращается к нему через HTTPS; SQLite остаётся на сервере и не публикуется напрямую.
-
-Для production необходимо настроить HTTPS, сильные секреты окружения, production SMS-провайдера и отключить тестовый OTP-режим. Smoke-тесты проверяют API на временной базе данных, но не заменяют аудит безопасности, нагрузочные тесты и проверку восстановления резервных копий.
-
-## Текущие ограничения
-
-Покупка подарков, передача файлов и медиа, звонки, push-уведомления и сквозное шифрование не реализованы. Telegram-аккаунты и история Telegram-чатов не переносятся в базу NexusGram. APK требует проверки на реальном устройстве и production-аудита.
-
-## Лицензирование
-
-Перед распространением APK на базе Telegram-derived исходников необходимо проверить лицензии Telegram и всех используемых компонентов.
-
-
-## Изменения v5
-
-- Доверие к forwarded IP ограничено локальным Caddy reverse proxy с явной настройкой.
-- Добавлены тесты защиты от подмены X-Forwarded-For.
-- В Android-клиенте появился ручной refresh последних диалогов и ограничения длины полей.
-- Версия самостоятельного APK повышена до 0.2.0 (versionCode 2).
+These are source/build artifacts, not proof that all app services have already been migrated to the VDS.
