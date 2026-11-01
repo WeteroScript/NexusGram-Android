@@ -1,5 +1,7 @@
 package org.telegram.messenger;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -55,6 +57,19 @@ public final class WaysGramApiClient {
      */
     public WaysGramApiClient(String serverUrl) {
         baseUrl = normalizeBaseUrl(serverUrl);
+    }
+
+    /**
+     * Uses the server URL already saved by the original Settings > WaysGram admin panel.
+     * This avoids adding a second server-address setting to the existing UI.
+     */
+    public WaysGramApiClient(Context context) {
+        if (context == null) {
+            throw new IllegalArgumentException("Context is required");
+        }
+        SharedPreferences preferences = context.getApplicationContext()
+                .getSharedPreferences("waysgram_admin_panel", Context.MODE_PRIVATE);
+        baseUrl = normalizeBaseUrl(preferences.getString("api_url", ""));
     }
 
     public String getBaseUrl() {
