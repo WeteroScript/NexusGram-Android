@@ -4,8 +4,8 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.view.Gravity;
+import android.view.View;
 import android.webkit.SslErrorHandler;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -110,8 +110,8 @@ public class DeveloperPanelActivity extends BaseFragment {
             }
 
             @Override
-            public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
-                if (request.isForMainFrame()) {
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                if (isAllowedUrl(Uri.parse(failingUrl))) {
                     setStatus("Не удалось открыть панель. Проверь адрес VDS и доступность /admin.");
                 }
             }
