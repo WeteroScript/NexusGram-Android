@@ -1,4 +1,5 @@
 name: WaysGram Android APK
+# WaysGram v10 integrated client + backend build
 # Standalone client integration validation pass
 
 on:
