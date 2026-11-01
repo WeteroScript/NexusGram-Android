@@ -1,0 +1,7 @@
+nexusgram.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8080 {
+        # Caddy overwrites this header with the actual TCP peer address.
+        header_up X-Forwarded-For {remote_host}
+    }
+}
