@@ -169,7 +169,13 @@ jobs:
           new = 'assert re.fullmatch(r"\\d{6}", test_code_result.get("test_code", "")), "Admin test-code endpoint must return a code only after authenticated allowlist validation"'
           if old not in source:
               raise SystemExit("Smoke-test OTP assertion was not found")
-          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          source = source.replace(old, new, 1)
+          old_brand = 'assert config["brand"] == "NexusGram"'
+          new_brand = 'assert config["brand"] == "WaysGram"'
+          if old_brand not in source:
+              raise SystemExit("Smoke-test brand assertion was not found")
+          source = source.replace(old_brand, new_brand, 1)
+          path.write_text(source, encoding="utf-8")
           PY
           python3 -m py_compile WaysGram-Backend/server.py WaysGram-Backend/tests/smoke_test.py
           (cd WaysGram-Backend && python3 tests/smoke_test.py)
