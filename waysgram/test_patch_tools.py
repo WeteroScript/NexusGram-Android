@@ -311,6 +311,9 @@ class SendMessagesHelper {
         assert "api.requestCode(virtualPhone" in login
         assert "api.verifyCode(waysgramPhone, code" in login
         assert "onWaysGramAuthSuccess(response)" in login
+        assert "activityMode != MODE_LOGIN" in login
+        assert "WaysGramApiRuntime.getConfigurationError()" in login
+        assert "if (!WaysGramApiRuntime.isConfigured())" in login
         controller = (source / "org/telegram/messenger/MessagesController.java").read_text(encoding="utf-8")
         sender = (source / "org/telegram/messenger/SendMessagesHelper.java").read_text(encoding="utf-8")
         assert "api.getConversations(" in controller
