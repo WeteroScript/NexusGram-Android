@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'nexusgram.part*'
+      - 'waysgram/**'
       - '.github/workflows/android.yml'
 
 permissions:
@@ -59,6 +60,16 @@ jobs:
 
           rsync -a --exclude='.git/' Telegram-master/ ./
 
+      - name: Restore original Telegram native login UI
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 waysgram/apply_native_ui_v11.py --root .
+
+      - name: Verify required Android source files
+        shell: bash
+        run: |
+          set -Eeuo pipefail
           required_files=(
             settings.gradle
             gradlew
