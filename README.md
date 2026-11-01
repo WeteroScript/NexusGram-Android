@@ -11,11 +11,13 @@ NexusGram — Android-клиент на основе исходного прое
 3. Нажми **Run workflow**.
 4. После успешного завершения скачай артефакт **NexusGram-APK**.
 
-Workflow собирает исходник из девяти частей `nexusgram.part01`–`nexusgram.part09`, восстанавливает Telegram source tree, применяет native UI patch v11 и собирает APK.
+Workflow собирает исходник из девяти частей `nexusgram.part01`–`nexusgram.part09`, восстанавливает Telegram source tree, применяет native UI patch v11, подготавливает API-конфигурацию и собирает APK.
+
+Для подключения к развёрнутому AuthBot добавь в настройках GitHub-репозитория секрет **`WAYSGRAM_API_BASE_URL`** со значением HTTPS-адреса сервера без конечного пути API. Workflow передаёт его Gradle как manifest placeholder. Секрет не записывается в исходники. Без него APK может собраться, но REST-клиент не сможет подключиться к backend.
 
 ## Сохранение оригинального интерфейса
 
-Скрипт `waysgram/apply_native_ui_v11.py` автоматически запускается в Android workflow после восстановления исходников. Он:
+Скрипты `waysgram/apply_native_ui_v11.py` и `waysgram/configure_api_client.py` автоматически запускаются в Android workflow после восстановления исходников. Второй скрипт внедряет адрес сервера из build secret в Android Manifest и добавляет `WaysGramApiConfig` для получения настройки приложением. Он:
 - сохраняет штатный переход IntroActivity → LoginActivity;
 - удаляет отдельный WaysGram Portal CTA из LoginActivity;
 - снимает Portal/Home Activities с регистрации в Android Manifest;
