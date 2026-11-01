@@ -47,6 +47,20 @@ def main() -> None:
         private CheckBoxCell testBackendCheckBox;
 boolean testBackend = false;
 void createLogin(Context context) {
+    final boolean allowTestBackend = true;
+    if (allowTestBackend && activityMode == MODE_LOGIN) {
+        testBackendCheckBox = new CheckBoxCell(context, 2);
+        testBackendCheckBox.setText(getString(R.string.DebugTestBackend), "", testBackend, false);
+        addView(testBackendCheckBox, LayoutHelper.createLinear(1, 1));
+        bottomMargin -= 24;
+        testBackendCheckBox.setOnClickListener(v -> {
+            testBackend = !testBackend;
+            getConnectionsManager().switchBackend(false);
+            loadCountries();
+        });
+    }
+    if (bottomMargin > 0) {
+    }
     if (activityMode == MODE_LOGIN) {
         TextView waysGramButton = new TextView(context);
         FrameLayout.LayoutParams waysGramParams = new FrameLayout.LayoutParams(1, 1);
