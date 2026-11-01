@@ -70,12 +70,6 @@ jobs:
           python3 waysgram/configure_api_runtime.py --root .
           python3 waysgram/configure_native_messenger.py --root .
 
-      - name: Verify original Telegram UI is preserved
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          python3 waysgram/verify_original_ui.py --root . --reference Telegram-master
-
       - name: Verify required Android source files
         shell: bash
         run: |
@@ -147,6 +141,12 @@ jobs:
 
           sed -n '270,310p' \
             TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java
+
+      - name: Verify original Telegram UI is preserved
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 waysgram/verify_original_ui.py --root . --reference Telegram-master
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
