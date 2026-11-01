@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'nexusgram.part*'
+      - 'waysgram/**'
       - '.github/workflows/android.yml'
 
 permissions:
