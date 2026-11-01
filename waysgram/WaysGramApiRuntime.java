@@ -54,7 +54,7 @@ public final class WaysGramApiRuntime {
     }
 
     /**
-     * NexusGram is a WaysGram-only client. Never fall back to Telegram MTProto
+     * WaysGram is a WaysGram-only client. Never fall back to Telegram MTProto
      * when the API URL or local WaysGram session is missing.
      */
     public static boolean isWaysGramMode() {
