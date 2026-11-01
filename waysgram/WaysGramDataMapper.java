@@ -2,6 +2,7 @@ package app.nexusgram.network;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.telegram.messenger.DialogObject;
 import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
