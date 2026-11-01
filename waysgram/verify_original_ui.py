@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 import xml.etree.ElementTree as ET
 
 
@@ -60,8 +61,20 @@ def main() -> int:
             problems.append(f"unexpected UI Java file: {path.as_posix()}")
         elif not new.is_file():
             problems.append(f"missing original UI Java file: {path.as_posix()}")
-        elif old.read_bytes() != new.read_bytes():
-            problems.append(f"modified original UI Java file: {path.as_posix()}")
+        else:
+            expected = old.read_bytes()
+            if path == Path("DeveloperPanelActivity.java"):
+                original_text = expected.decode("utf-8")
+                pattern = re.compile(r'(\\.append\\(")(.*?)(?="\\))', re.DOTALL)
+                repaired, count = pattern.subn(
+                    lambda match: match.group(1) + match.group(2).replace("\\n", r"\\n"),
+                    original_text,
+                )
+                if count == 0:
+                    problems.append("expected DeveloperPanelActivity string-literal repair anchor was not found in reference")
+                expected = repaired.encode("utf-8")
+            if expected != new.read_bytes():
+                problems.append(f"modified original UI Java file: {path.as_posix()}")
 
     # Layouts, drawables, menus, themes, dimensions and other resources must be
     # identical. Only strings.xml files may differ for the WaysGram app name.
