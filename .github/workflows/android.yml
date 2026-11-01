@@ -7,6 +7,7 @@ on:
     paths:
       - 'nexusgram.part*'
       - '.github/workflows/android.yml'
+      - 'waysgram/**'
       - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
       - 'release/nexusgram-v4.patch.xz.b64'
       - 'release/nexusgram-v5.patch.xz.b64'
@@ -92,6 +93,12 @@ jobs:
             echo "[OK] $file"
           done
 
+      - name: Inject WaysGram admin panel into original Settings
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 waysgram/apply_android_patch.py
+
       - name: Apply WaysGram branding and prepare the backend source
         shell: bash
         run: |
@@ -148,45 +155,6 @@ jobs:
             echo "::error::Standalone launcher registration unexpectedly remains"
             exit 1
           fi
-
-      - name: Repair malformed Java string literals
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path(
-              "TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java"
-          )
-
-          if not path.is_file():
-              raise SystemExit(f"Missing expected source file: {path}")
-
-          source = path.read_text()
-
-          pattern = re.compile(r'(\.append\(")(.*?)(?="\))', re.DOTALL)
-
-          repaired, count = pattern.subn(
-              lambda match: match.group(1) + match.group(2).replace(
-                  "\n", r"\n"
-              ),
-              source,
-          )
-
-          if count == 0:
-              raise SystemExit(
-                  "No multiline append string literals matched. "
-                  "Inspect DeveloperPanelActivity.java."
-              )
-
-          path.write_text(repaired)
-          print(f"Repaired {count} multiline append string literal(s)")
-          PY
-
-          sed -n '270,310p' \
-            TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java
 
       - name: Package complete WaysGram source ZIP
         shell: bash
