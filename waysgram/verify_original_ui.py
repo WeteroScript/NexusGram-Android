@@ -100,8 +100,8 @@ def main() -> int:
     else:
         original_login = reference_login.read_text(encoding="utf-8")
         patched_login = current_login.read_text(encoding="utf-8")
-        original_add_views = len(re.findall(r"\\baddView\\s*\\(", original_login))
-        patched_add_views = len(re.findall(r"\\baddView\\s*\\(", patched_login))
+        original_add_views = len(re.findall(r"\baddView\s*\(", original_login))
+        patched_add_views = len(re.findall(r"\baddView\s*\(", patched_login))
         if patched_add_views > original_add_views:
             problems.append(
                 f"LoginActivity added custom views: {original_add_views} original addView calls, "
