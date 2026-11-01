@@ -161,7 +161,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           base64 --decode waysgram/server-admin.patch.gz.b64 | gzip --decompress | patch --directory=WaysGram-Backend --strip=1
+          patch --directory=WaysGram-Backend --strip=1 < waysgram/server-profile.patch
           python3 waysgram/apply_admin_web_ui.py
+          python3 waysgram/test_profile_api.py
           python3 waysgram/test_admin_channel_roles.py
           python3 waysgram/test_android_api_contract.py
           python3 - <<'PY'
