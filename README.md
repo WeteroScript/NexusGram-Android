@@ -8,7 +8,9 @@ WaysGram is a rebranded build of the original Android client with the original U
 - The original LoginActivity, LaunchActivity, SettingsActivity and existing screens are retained.
 - The visible app name is changed to WaysGram in localized resources.
 - The WaysGram backend source is included in the source archive and can be deployed separately to a VDS.
-- The existing Settings entry for the developer panel is retained.
+- A dedicated **Админ-панель WaysGram** entry is injected into the original Settings screen immediately below the language row; the existing layout and other screens remain intact.
+- The native entry opens the VDS-hosted `/admin` panel over HTTPS. The panel uses the backend's actual `/api/admin/*` routes.
+- The admin web panel supports Stars, gift catalog CRUD, channel CRUD, user lookup and ban/unban. Test OTP creation remains restricted to an explicitly configured allowlist on the VDS.
 
 ## Important integration status
 
