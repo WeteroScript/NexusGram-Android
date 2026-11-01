@@ -130,6 +130,21 @@ public final class WaysGramApiClient {
         enqueue("GET", "/api/me", null, token, callback);
     }
 
+    public void updateProfile(String token, String username, String displayName, Callback callback) {
+        JSONObject body = new JSONObject();
+        try {
+            if (username != null) {
+                body.put("username", username.trim());
+            }
+            if (displayName != null) {
+                body.put("display_name", displayName.trim());
+            }
+        } catch (JSONException e) {
+            throw new IllegalArgumentException("Не удалось сформировать данные профиля", e);
+        }
+        enqueue("POST", "/api/profile", body, token, callback);
+    }
+
     public void getConversations(String token, Callback callback) {
         enqueue("GET", "/api/conversations", null, token, callback);
     }
