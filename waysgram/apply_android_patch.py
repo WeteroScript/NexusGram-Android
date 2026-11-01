@@ -12,8 +12,12 @@ SESSION_SOURCE = Path(__file__).with_name("WaysGramSessionStore.java")
 SESSION_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramSessionStore.java"
 AUTH_SOURCE = Path(__file__).with_name("WaysGramAuthRepository.java")
 AUTH_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramAuthRepository.java"
+MODELS_SOURCE = Path(__file__).with_name("WaysGramModels.java")
+MODELS_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramModels.java"
+MESSAGING_SOURCE = Path(__file__).with_name("WaysGramMessagingRepository.java")
+MESSAGING_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramMessagingRepository.java"
 
-for required in (SETTINGS, PANEL_SOURCE, API_SOURCE, SESSION_SOURCE, AUTH_SOURCE):
+for required in (SETTINGS, PANEL_SOURCE, API_SOURCE, SESSION_SOURCE, AUTH_SOURCE, MODELS_SOURCE, MESSAGING_SOURCE):
     if not required.is_file():
         raise SystemExit(f"Missing required WaysGram integration file: {required}")
 
@@ -48,6 +52,20 @@ if missing:
 if "new TLRPC.TL_auth_sendCode" in auth_source or "new TLRPC.TL_auth_signIn" in auth_source:
     raise SystemExit("WaysGram auth repository must not use Telegram MTProto login")
 
+models_source = MODELS_SOURCE.read_text(encoding="utf-8")
+models_contract = ("class User", "class Conversation", "class Message", "class Channel", "class ChannelMessage", "class Gift")
+missing = [marker for marker in models_contract if marker not in models_source]
+if missing:
+    raise SystemExit("WaysGram data models are incomplete: " + ", ".join(missing))
+
+messaging_source = MESSAGING_SOURCE.read_text(encoding="utf-8")
+messaging_contract = ("getConversations", "searchUsers", "getMessages", "sendMessage", "getChannels", "getChannelMessages", "publishChannelMessage", "getGifts", "WaysGramSessionStore", "TLRPC")
+missing = [marker for marker in messaging_contract if marker not in messaging_source]
+if missing:
+    raise SystemExit("WaysGram messaging repository contract is incomplete: " + ", ".join(missing))
+if "ConnectionsManager" in messaging_source or "TLRPC." in messaging_source:
+    raise SystemExit("WaysGram messaging repository must not use Telegram MTProto models or transport")
+
 source = SETTINGS.read_text(encoding="utf-8")
 old_entry = '''        items.add(UItem.asShadow(null));
         items.add(UItem.asHeader("Разработчик"));
@@ -78,4 +96,8 @@ SESSION_TARGET.parent.mkdir(parents=True, exist_ok=True)
 SESSION_TARGET.write_text(session_source, encoding="utf-8")
 AUTH_TARGET.parent.mkdir(parents=True, exist_ok=True)
 AUTH_TARGET.write_text(auth_source, encoding="utf-8")
-print("WaysGram admin panel, REST transport, Keystore storage and auth repository injected")
+MODELS_TARGET.parent.mkdir(parents=True, exist_ok=True)
+MODELS_TARGET.write_text(models_source, encoding="utf-8")
+MESSAGING_TARGET.parent.mkdir(parents=True, exist_ok=True)
+MESSAGING_TARGET.write_text(messaging_source, encoding="utf-8")
+print("WaysGram admin panel, REST, Keystore, auth and messaging layers injected")
