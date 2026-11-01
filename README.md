@@ -20,9 +20,11 @@ Workflow собирает исходник из девяти частей `nexus
 Скрипты `waysgram/apply_native_ui_v11.py` и `waysgram/configure_api_client.py` автоматически запускаются в Android workflow после восстановления исходников. Второй скрипт внедряет адрес сервера из build secret в Android Manifest и добавляет `WaysGramApiConfig` для получения настройки приложением. Он:
 - сохраняет штатный переход IntroActivity → LoginActivity;
 - удаляет отдельный WaysGram Portal CTA из LoginActivity;
-- снимает Portal/Home Activities с регистрации в Android Manifest;
+- снимает Portal/Home Activities с регистрации в Android Manifest и удаляет их Java-файлы после проверки, что на них нет внешних ссылок;
 - удаляет видимый переключатель `Test Backend` и его строковый ресурс;
 - проверяет, что исходный LoginActivity остаётся точкой входа.
+
+Скрипт `waysgram/configure_api_client.py` устанавливает REST-клиент из `waysgram/NexusGramApiClient.java` и helper конфигурации в штатное дерево проекта.
 
 Скрипт идемпотентен: повторное применение не меняет уже исправленные файлы. Он не перерисовывает штатные Telegram-экраны.
 
