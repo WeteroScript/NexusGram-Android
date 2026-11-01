@@ -44,7 +44,7 @@ def main() -> None:
         write(
             source / "org/telegram/ui/LoginActivity.java",
             """import app.nexusgram.ui.WaysGramPortalActivity;
-private CheckBoxCell testBackendCheckBox;
+        private CheckBoxCell testBackendCheckBox;
 boolean testBackend = false;
 void createLogin(Context context) {
     if (activityMode == MODE_LOGIN) {
