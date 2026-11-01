@@ -997,7 +997,8 @@ class Handler(BaseHTTPRequestHandler):
                     if key == "name":
                         val = str(val).strip()
                         if not val or len(val) > 80: raise ApiError(400, "Некорректное название")
-                    else:                        val = int(val)
+                    else:
+                        val = int(val)
                         if val < 0: raise ApiError(400, "Стоимость и supply не могут быть отрицательными")
                     fields.append(key + "=?"); values.append(val)
             if not fields: raise ApiError(400, "Нет полей для изменения")
