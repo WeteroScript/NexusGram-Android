@@ -109,7 +109,36 @@ public class ApplicationLoader {
         write(
             source / "org/telegram/ui/LoginActivity.java",
             """package org.telegram.ui;
+import app.nexusgram.ui.WaysGramPortalActivity;
+        private CheckBoxCell testBackendCheckBox;
+boolean testBackend = false;
 class LoginActivity {
+    void createLogin(Context context) {
+        final boolean allowTestBackend = true;
+        if (allowTestBackend && activityMode == MODE_LOGIN) {
+            testBackendCheckBox = new CheckBoxCell(context, 2);
+            testBackendCheckBox.setText(getString(R.string.DebugTestBackend), "", testBackend, false);
+            addView(testBackendCheckBox, LayoutHelper.createLinear(1, 1));
+            bottomMargin -= 24;
+            testBackendCheckBox.setOnClickListener(v -> {
+                testBackend = !testBackend;
+                getConnectionsManager().switchBackend(false);
+                loadCountries();
+            });
+        }
+        if (bottomMargin > 0) {
+        }
+        if (activityMode == MODE_LOGIN) {
+            TextView waysGramButton = new TextView(context);
+            FrameLayout.LayoutParams waysGramParams = new FrameLayout.LayoutParams(1, 1);
+            waysGramButton.setText("WaysGram");
+            addView(waysGramButton, waysGramParams);
+        }
+        if (testBackendCheckBox != null) {
+            testBackendCheckBox.setSquareCheckBoxColor(a, b, c);
+            testBackendCheckBox.updateTextColor();
+        }
+    }
     class PhoneView {
         boolean nextPressed;
         boolean isRequestingFirebaseSms;
