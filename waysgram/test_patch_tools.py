@@ -92,9 +92,9 @@ void createLogin(Context context) {
         )
         write(
             root / "TMessagesProj/src/main/res/values-ru/strings.xml",
-            "<resources>\\n"
-            "    <string name=\\"AppName\\">Telegram</string>\\n"
-            "</resources>\\n",
+            "<resources>\n"
+            "    <string name=\"AppName\">Telegram</string>\n"
+            "</resources>\n",
         )
         write(
             root / "TMessagesProj/build.gradle",
