@@ -10,6 +10,7 @@ on:
       - '.github/workflows/android.yml'
       - 'waysgram/**'
       - 'waysgram-v10/**'
+      - 'v10-build/**'
       - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
       - 'release/nexusgram-v4.patch.xz.b64'
       - 'release/nexusgram-v5.patch.xz.b64'
@@ -188,14 +189,31 @@ jobs:
           python3 -m py_compile WaysGram-Backend/server.py WaysGram-Backend/tests/smoke_test.py
           (cd WaysGram-Backend && python3 tests/smoke_test.py)
 
-      - name: Install WaysGram v10 portal, recovery client and backend
+      - name: Install integrated WaysGram v10 client and backend
         shell: bash
         run: |
           set -Eeuo pipefail
-          python3 waysgram-v10/install_v10.py "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/waysgram-v10"
+          shopt -s nullglob
+          parts=(v10-build/part-*.b64)
+          if (( ${#parts[@]} != 10 )); then
+            echo "::error::Expected 10 WaysGram v10 bundle segments, found ${#parts[@]}"
+            printf 'Found: %s\\n' "${parts[@]}"
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/waysgram-v10"
+          cat "${parts[@]}" | base64 --decode > "$RUNNER_TEMP/waysgram-v10.tar.xz"
+          xz --test "$RUNNER_TEMP/waysgram-v10.tar.xz"
+          tar -xJf "$RUNNER_TEMP/waysgram-v10.tar.xz" -C "$RUNNER_TEMP/waysgram-v10"
+
+          bundle="$RUNNER_TEMP/waysgram-v10/waysgram-v10-build-bundle"
+          test -s "$bundle/install_v10.py"
+          python3 "$bundle/install_v10.py" "$GITHUB_WORKSPACE" "$bundle"
+
           python3 -m compileall -q WaysGram-Backend/server.py WaysGram-Backend/tests
           bash -n WaysGram-Backend/start-termux.sh
           (cd WaysGram-Backend && python3 tests/smoke_test.py)
+
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
