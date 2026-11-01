@@ -32,6 +32,16 @@ def patch_login(path: Path) -> bool:
             "custom WaysGram login button",
         )
 
+    # Some Telegram source snapshots still render the Test Backend row.
+    # Remove the complete row, including its backend-switching click handler.
+    if "final boolean allowTestBackend =" in source:
+        source = replace_once(
+            source,
+            r"^[ \t]*final boolean allowTestBackend = [^\n]*\n.*?(?=^[ \t]*if \(bottomMargin > 0)",
+            "\n",
+            "Test Backend option and backend switch handler",
+        )
+
     if "testBackendCheckBox != null" in source:
         source = replace_once(
             source,
