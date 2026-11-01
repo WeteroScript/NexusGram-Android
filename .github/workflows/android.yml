@@ -122,29 +122,25 @@ jobs:
           from pathlib import Path
           import re
 
-          # Keep all Android layouts, resources other than the app label, and activity
-          # registrations intact. Only the visible product name changes.
-          res = Path("TMessagesProj/src/main/res")
-          updated = 0
-          for path in res.rglob("strings.xml"):
-              source = path.read_text(encoding="utf-8")
-              new = re.sub(r'(<string\s+name="AppName">).*?(</string>)', r'\1WaysGram\2', source, count=1)
-              new = re.sub(r'(<string\s+name="AppNameBeta">).*?(</string>)', r'\1WaysGram Beta\2', new, count=1)
-              if new != source:
-                  path.write_text(new, encoding="utf-8")
-                  updated += 1
-          if updated == 0:
-              raise SystemExit("No AppName resources were updated")
-          print(f"Updated WaysGram branding in {updated} localized strings.xml files")
+          resources = Path("TMessagesProj/src/main/res")
+          count = 0
+          for path in resources.rglob("strings.xml"):
+              original = path.read_text(encoding="utf-8")
+              updated = re.sub(r'(<string\s+name="AppName">).*?(</string>)', r'\1WaysGram\2', original, count=1)
+              updated = re.sub(r'(<string\s+name="AppNameBeta">).*?(</string>)', r'\1WaysGram Beta\2', updated, count=1)
+              if updated != original:
+                  path.write_text(updated, encoding="utf-8")
+                  count += 1
+          if count == 0:
+              raise SystemExit("No localized AppName resources were updated")
+          print(f"Updated application name in {count} localized resource files")
 
-          # Brand backend-facing labels without changing environment variable names
-          # or data/API behavior, preserving deployment compatibility.
           for relative in ("WaysGram-Backend/server.py", "WaysGram-Backend/README_RU.txt", "WaysGram-Backend/static/admin.html"):
               path = Path(relative)
               if path.exists():
-                  text = path.read_text(encoding="utf-8")
-                  text = text.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
-                  path.write_text(text, encoding="utf-8")
+                  value = path.read_text(encoding="utf-8")
+                  value = value.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
+                  path.write_text(value, encoding="utf-8")
           PY
 
           test ! -e TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
@@ -192,6 +188,42 @@ jobs:
           sed -n '270,310p' \
             TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java
 
+      - name: Package complete WaysGram source ZIP
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+
+          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
+          output = Path("WaysGram-Source.zip")
+          with ZipFile(output, "w", ZIP_DEFLATED, compresslevel=5) as archive:
+              for path in Path(".").rglob("*"):
+                  if not path.is_file():
+                      continue
+                  rel = path.relative_to(".")
+                  if any(part in excluded for part in rel.parts):
+                      continue
+                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
+                      continue
+                  if rel.parts and rel.parts[0] == "release":
+                      continue
+                  archive.write(path, rel.as_posix())
+          size = output.stat().st_size
+          if size < 1024 * 1024:
+              raise SystemExit(f"Source archive is unexpectedly small: {size} bytes")
+          print(f"Created WaysGram-Source.zip ({size} bytes)")
+          PY
+
+      - name: Upload WaysGram source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WaysGram-Source-ZIP
+          path: WaysGram-Source.zip
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -233,43 +265,7 @@ jobs:
 
           rustup target add --toolchain "${RUST_TOOLCHAIN}" \
             aarch64-linux-android \
-            armv7-linux-an      - name: Package complete WaysGram source ZIP
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          from zipfile import ZipFile, ZIP_DEFLATED
-
-          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
-          output = Path("WaysGram-Source.zip")
-          with ZipFile(output, "w", ZIP_DEFLATED, compresslevel=5) as archive:
-              for path in Path(".").rglob("*"):
-                  if not path.is_file():
-                      continue
-                  rel = path.relative_to(".")
-                  if any(part in excluded for part in rel.parts):
-                      continue
-                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
-                      continue
-                  if rel.parts and rel.parts[0] == "release":
-                      continue
-                  archive.write(path, rel.as_posix())
-          size = output.stat().st_size
-          if size < 1024 * 1024:
-              raise SystemExit(f"Source archive is unexpectedly small: {size} bytes")
-          print(f"Created WaysGram-Source.zip ({size} bytes)")
-          PY
-
-      - name: Upload WaysGram source ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: WaysGram-Source-ZIP
-          path: WaysGram-Source.zip
-          if-no-files-found: error
-          retention-days: 14
-
-droideabi \
+            armv7-linux-androideabi \
             i686-linux-android \
             x86_64-linux-android
 
