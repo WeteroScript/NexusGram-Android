@@ -163,10 +163,22 @@ public final class NexusGramApiClient implements AutoCloseable {
         get("/api/users/" + userId, true, callback);
     }
     public void getConversations(Callback callback) { get("/api/conversations", true, callback); }
-    public void getMessages(long peerId, Callback callback) { getMessages(peerId, 0, callback); }
+    public void getMessages(long peerId, Callback callback) { getMessages(peerId, 0, 0, callback); }
     public void getMessages(long peerId, long afterId, Callback callback) {
-        if (peerId <= 0 || afterId < 0) { error(callback, "Некорректные параметры переписки"); return; }
-        get("/api/messages?with=" + peerId + "&after_id=" + afterId, true, callback);
+        getMessages(peerId, afterId, 0, callback);
+    }
+    public void getMessages(long peerId, long afterId, long beforeId, Callback callback) {
+        if (peerId <= 0 || afterId < 0 || beforeId < 0 || (afterId > 0 && beforeId > 0)) {
+            error(callback, "Некорректные параметры переписки");
+            return;
+        }
+        String path = "/api/messages?with=" + peerId;
+        if (afterId > 0) {
+            path += "&after_id=" + afterId;
+        } else if (beforeId > 0) {
+            path += "&before_id=" + beforeId;
+        }
+        get(path, true, callback);
     }
     public void sendMessage(long recipientId, String text, Callback callback) {
         if (recipientId <= 0 || text == null || text.trim().isEmpty()) {
