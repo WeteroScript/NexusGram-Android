@@ -53,6 +53,11 @@ public final class WaysGramApiRuntime {
         return client != null;
     }
 
+    public static boolean isSignedIn() {
+        NexusGramApiClient current = client;
+        return current != null && current.isSignedIn();
+    }
+
     public static String getConfigurationError() {
         return configurationError;
     }
