@@ -106,9 +106,136 @@ public class ApplicationLoader {
 }
 """,
         )
+        write(
+            source / "org/telegram/ui/LoginActivity.java",
+            """package org.telegram.ui;
+class LoginActivity {
+    class PhoneView {
+        boolean nextPressed;
+        boolean isRequestingFirebaseSms;
+        String phone;
+        void onConfirm() {
+            confirmedNumber = true;
+            currentDoneType = DONE_TYPE_FLOATING;
+            needShowProgress(0, false);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPhonePermissions();
+            }
+        }
+        @Override
+        public void onNextPressed(String code) {
+            if (getParentActivity() == null || nextPressed || isRequestingFirebaseSms) {
+                return;
+            }
+        }
+    }
+    public class LoginActivitySmsView extends SlideView implements NotificationCenter.NotificationCenterDelegate {
+        private boolean nextPressed;
+        private String lastError = "";
+
+        public void setParams(Bundle params, boolean restore) {
+            if (params == null) {
+                if (nextCodeParams != null && nextCodeAuth != null) {
+                    return;
+                }
+                return;
+            }
+            waitingForEvent = true;
+            if (currentType == AUTH_TYPE_FRAGMENT_SMS) {
+                addSmsObserver();
+            } else if (currentType == AUTH_TYPE_SMS) {
+                AndroidUtilities.setWaitingForSms(true);
+                NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.didReceiveSmsCode);
+            }
+            confirmTextView.setText(str);
+        }
+
+        public void onNextPressed(String code) {
+            nextPressed = true;
+            if (currentType == AUTH_TYPE_FRAGMENT_SMS) {
+                removeSmsObserver();
+            } else if (currentType == AUTH_TYPE_SMS) {
+                AndroidUtilities.setWaitingForSms(false);
+                NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didReceiveSmsCode);
+            }
+            waitingForEvent = false;
+
+            switch (activityMode) {
+                case MODE_LOGIN: break;
+            }
+        }
+
+        public boolean onBackPressed(boolean force) {
+            nextPressed = false;
+            tryHideProgress(true);
+            TLRPC.TL_auth_cancelCode req = new TLRPC.TL_auth_cancelCode();
+            req.phone_number = requestPhone;
+            req.phone_code_hash = phoneHash;
+            ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> {
+
+            }, ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+
+            destroyTimer();
+            destroyCodeTimer();
+            currentParams = null;
+            if (currentType == AUTH_TYPE_FRAGMENT_SMS) {
+                removeSmsObserver();
+            } else if (currentType == AUTH_TYPE_SMS) {
+                AndroidUtilities.setWaitingForSms(false);
+                NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didReceiveSmsCode);
+            }
+            waitingForEvent = false;
+            return true;
+        }
+
+        @Override
+        public void onDestroyActivity() {
+            super.onDestroyActivity();
+            if (currentType == AUTH_TYPE_FRAGMENT_SMS) {
+                removeSmsObserver();
+            } else if (currentType == AUTH_TYPE_SMS) {
+                AndroidUtilities.setWaitingForSms(false);
+                NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didReceiveSmsCode);
+            }
+            waitingForEvent = false;
+        }
+    }
+    private void onAuthSuccess(TLRPC.TL_auth_authorization res) {
+    }
+}
+"""
+        )
+        write(
+            source / "org/telegram/messenger/MessagesController.java",
+            """package org.telegram.messenger;
+class MessagesController {
+    public void loadDialogs(final int folderId, int offset, int count, boolean fromCache, Runnable onEmptyCallback) {
+        if (loadingDialogs.get(folderId) || resetingDialogs) {
+            return;
+        }
+    }
+    private void loadMessagesInternal() {
+        final TLRPC.Chat chat = dialogId < 0 ? getChat(-dialogId): null;
+    }
+    public void processLoadedMessages(TLRPC.messages_Messages messagesRes, int resCount, long dialogId, long mergeDialogId, int count, int max_id, int offset_date, boolean isCache, int classGuid,
+    }
+}
+"""
+        )
+        write(
+            source / "org/telegram/messenger/SendMessagesHelper.java",
+            """package org.telegram.messenger;
+class SendMessagesHelper {
+    public void sendMessage(SendMessageParams sendMessageParams) {
+        final SendMessageChatArguments sendMessageChatArguments = SendMessageChatArguments.EMPTY;
+    }
+}
+"""
+        )
         (waysgram).mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / "NexusGramApiClient.java", waysgram / "NexusGramApiClient.java")
         shutil.copy2(ROOT / "WaysGramApiRuntime.java", waysgram / "WaysGramApiRuntime.java")
+        shutil.copy2(ROOT / "WaysGramDataMapper.java", waysgram / "WaysGramDataMapper.java")
 
         write(
             source / "app/nexusgram/ui/WaysGramPortalActivity.java",
@@ -123,6 +250,7 @@ public class ApplicationLoader {
             ROOT / "apply_native_ui_v11.py",
             ROOT / "configure_api_client.py",
             ROOT / "configure_api_runtime.py",
+            ROOT / "configure_native_messenger.py",
         )
         for script in scripts:
             run(script, root)
@@ -148,10 +276,21 @@ public class ApplicationLoader {
         assert (source / "app/nexusgram/network/NexusGramApiClient.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramApiConfig.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramApiRuntime.java").is_file()
+        assert (source / "app/nexusgram/network/WaysGramDataMapper.java").is_file()
+        assert "api.requestCode(virtualPhone" in login
+        assert "api.verifyCode(waysgramPhone, code" in login
+        assert "onWaysGramAuthSuccess(response)" in login
+        controller = (source / "org/telegram/messenger/MessagesController.java").read_text(encoding="utf-8")
+        sender = (source / "org/telegram/messenger/SendMessagesHelper.java").read_text(encoding="utf-8")
+        assert "api.getConversations(" in controller
+        assert "finishWaysGramMessages(" in controller
+        assert "api.sendMessage(waysGramPeer" in sender
+        assert "WaysGramDataMapper.message(response" in sender
+        assert "waysgramMode" in login
         assert not (source / "app/nexusgram/ui/WaysGramPortalActivity.java").exists()
         assert not (source / "app/nexusgram/ui/WaysGramHomeActivity.java").exists()
 
-        print("PASS: native UI, API configuration and shared runtime patches are idempotent.")
+        print("PASS: native UI, API configuration, shared runtime and native messenger patches are idempotent.")
         print("PASS: original LoginActivity remains the login entry point.")
         print("PASS: no Portal/Home activities or Test Backend control remain.")
 
