@@ -66,13 +66,20 @@ def main() -> None:
 
     gradle = root / "TMessagesProj/build.gradle"
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
+    client_source = root / "waysgram/NexusGramApiClient.java"
     client = root / "TMessagesProj/src/main/java/app/nexusgram/network/NexusGramApiClient.java"
     config = root / "TMessagesProj/src/main/java/app/nexusgram/network/WaysGramApiConfig.java"
-    for path in (gradle, manifest, client):
+    for path in (gradle, manifest, client_source):
         if not path.is_file():
             raise SystemExit(f"Missing required source file: {path}")
 
     changed = 0
+    client.parent.mkdir(parents=True, exist_ok=True)
+    bundled_client = client_source.read_text(encoding="utf-8")
+    if not client.exists() or client.read_text(encoding="utf-8") != bundled_client:
+        client.write_text(bundled_client, encoding="utf-8")
+        changed += 1
+
     changed += update_once(
         gradle,
         "    defaultConfig {\n        minSdkVersion 23",
