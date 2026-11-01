@@ -13,7 +13,7 @@ public final class WaysGramApiRuntime {
     private static final String TAG = "WaysGramApiRuntime";
     private static final Object LOCK = new Object();
 
-    private static volatile NexusGramApiClient client;
+    private static volatile WaysGramApiClient client;
     private static volatile String configurationError = "";
 
     private WaysGramApiRuntime() {
@@ -33,7 +33,7 @@ public final class WaysGramApiRuntime {
                 return;
             }
             try {
-                client = new NexusGramApiClient(context.getApplicationContext(), baseUrl);
+                client = new WaysGramApiClient(context.getApplicationContext(), baseUrl);
                 configurationError = "";
             } catch (RuntimeException error) {
                 configurationError = error.getMessage() == null
@@ -45,7 +45,7 @@ public final class WaysGramApiRuntime {
     }
 
     /** Returns the process-wide client, or null when this build has no API URL. */
-    public static NexusGramApiClient getClient() {
+    public static WaysGramApiClient getClient() {
         return client;
     }
 
@@ -62,7 +62,7 @@ public final class WaysGramApiRuntime {
     }
 
     public static boolean isSignedIn() {
-        NexusGramApiClient current = client;
+        WaysGramApiClient current = client;
         return current != null && current.isSignedIn();
     }
 
