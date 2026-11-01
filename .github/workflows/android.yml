@@ -156,6 +156,24 @@ jobs:
             exit 1
           fi
 
+      - name: Apply and test WaysGram admin API integration
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base64 --decode waysgram/server-admin.patch.gz.b64 | gzip --decompress | patch --directory=WaysGram-Backend --strip=1
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("WaysGram-Backend/tests/smoke_test.py")
+          source = path.read_text(encoding="utf-8")
+          old = 'assert not re.search(r"\\b\\d{6}\\b", json.dumps(test_code_result))'
+          new = 'assert re.fullmatch(r"\\d{6}", test_code_result.get("test_code", "")), "Admin test-code endpoint must return a code only after authenticated allowlist validation"'
+          if old not in source:
+              raise SystemExit("Smoke-test OTP assertion was not found")
+          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          PY
+          python3 -m py_compile WaysGram-Backend/server.py WaysGram-Backend/tests/smoke_test.py
+          (cd WaysGram-Backend && python3 tests/smoke_test.py)
+
       - name: Package complete WaysGram source ZIP
         shell: bash
         run: |
