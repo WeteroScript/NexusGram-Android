@@ -265,7 +265,7 @@ class SendMessagesHelper {
 """
         )
         (waysgram).mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / "NexusGramApiClient.java", waysgram / "NexusGramApiClient.java")
+        shutil.copy2(ROOT / "WaysGramApiClient.java", waysgram / "WaysGramApiClient.java")
         shutil.copy2(ROOT / "WaysGramApiRuntime.java", waysgram / "WaysGramApiRuntime.java")
         shutil.copy2(ROOT / "WaysGramDataMapper.java", waysgram / "WaysGramDataMapper.java")
 
@@ -306,7 +306,7 @@ class SendMessagesHelper {
         assert "waysgramApiBaseUrl" in gradle
         assert "WaysGramApiRuntime.initialize(applicationContext);" in app_loader
         assert "import app.nexusgram.network.WaysGramApiRuntime;" in app_loader
-        assert (source / "app/nexusgram/network/NexusGramApiClient.java").is_file()
+        assert (source / "app/nexusgram/network/WaysGramApiClient.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramApiConfig.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramApiRuntime.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramDataMapper.java").is_file()
