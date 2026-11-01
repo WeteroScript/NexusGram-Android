@@ -11,21 +11,22 @@ WaysGram — Android-клиент на основе исходного Android-�
 3. Нажми **Run workflow**.
 4. После успешного завершения скачай артефакт **WaysGram-APK**.
 
-Workflow собирает исходник из девяти частей `nexusgram.part01`–`nexusgram.part09`, восстанавливает Telegram source tree, удаляет отдельный Portal/Test Backend UI, устанавливает REST-клиент и bridge для native login/text messaging, а затем собирает APK.
+Workflow собирает исходник из девяти архивных частей, восстанавливает исходное дерево Android и подключает WaysGram REST к существующим экранам. В APK отображаемое имя приложения — WaysGram во всех десяти локалях.
 
 Для подключения к развёрнутому AuthBot добавь в настройках GitHub-репозитория секрет **`WAYSGRAM_API_BASE_URL`** со значением HTTPS-адреса сервера без конечного пути API. Workflow передаёт его Gradle как manifest placeholder. Секрет не записывается в исходники. Без него APK может собраться, но вход WaysGram будет закрыт с сообщением о ненастроенном API. Резервного перехода на Telegram MTProto для входа нет.
 
 ## Оригинальный интерфейс и native integration
 
-Android-клиент собирается под брендом WaysGram; базовые экраны и навигация сохранены из исходного кода Telegram. Внешний вид экранов не заменяется самодельными Portal/Home-страницами.
+**Интерфейс не перерисовывается и не заменяется.** WaysGram использует штатные экраны, компоненты, навигацию, диалоги, вкладки, оформление, цвета, иконки и ресурсы из предоставленного исходного Android-архива Telegram. Отдельных Portal/Home-экранов, самодельного главного меню или новых визуальных оболочек нет. Launcher name изменён на WaysGram; оригинальная иконка и визуальные ресурсы сохранены.
 
-- `apply_native_ui_v11.py` сохраняет переход IntroActivity → LoginActivity, удаляет WaysGram Portal CTA, Portal/Home Activity registration и видимый переключатель `Test Backend`.
+- `apply_native_ui_v11.py` сохраняет переход IntroActivity → оригинальный LoginActivity, удаляет только прежний самодельный WaysGram Portal CTA и отладочный переключатель `Test Backend`; все `values*/strings.xml` получают единое имя приложения WaysGram.
 - `configure_api_client.py` устанавливает REST-клиент, читает HTTPS endpoint из build-time manifest metadata и добавляет `WaysGramApiConfig`.
 - `configure_api_runtime.py` инициализирует единый экземпляр `WaysGramApiClient` в `ApplicationLoader`.
 - `configure_native_messenger.py` подключает WaysGram REST к штатным `LoginActivity.PhoneView` / SMS code view, `MessagesController` и `SendMessagesHelper`.
-- `WaysGramDataMapper.java` переводит серверные профили, диалоги и текстовые сообщения в native Telegram TL-модели, чтобы штатные `DialogsActivity` и `ChatActivity` могли их отображать.
+- `WaysGramDataMapper.java` переводит серверные профили, диалоги и текстовые сообщения в native-модели для отображения существующими `DialogsActivity` и `ChatActivity`.
+- `verify_original_ui.py` на каждой полной сборке сравнивает исходники всех экранов `org/telegram/ui` (кроме LoginActivity, куда добавлены только обработчики WaysGram-входа) с оригинальным архивом; также побайтово проверяет остальные UI Java-классы и Android UI-ресурсы. Все ресурсы, кроме локализованных `strings.xml`, должны оставаться идентичными оригиналу.
 
-Патчи идемпотентны. Отдельный workflow **WaysGram Android Patch Tests** проверяет их повторное применение на Python 3.11 и 3.12 без полной Android/NDK-сборки. Изменения в `waysgram/**` также запускают полную APK-сборку.
+Патчи идемпотентны. Отдельный workflow **WaysGram Android Patch Tests** проверяет их повторное применение и проверку сохранения оригинального интерфейса на Python 3.11 и 3.12 без полной Android/NDK-сборки. Изменения в `waysgram/**` также запускают полную APK-сборку.
 
 ## Backend и текущий статус интеграции
 
