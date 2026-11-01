@@ -27,7 +27,7 @@ def main() -> None:
     source_root = root / "TMessagesProj/src/main/java"
     app_loader = source_root / "org/telegram/messenger/ApplicationLoader.java"
     package_root = source_root / "app/nexusgram/network"
-    client = package_root / "NexusGramApiClient.java"
+    client = package_root / "WaysGramApiClient.java"
     config = package_root / "WaysGramApiConfig.java"
     runtime = package_root / "WaysGramApiRuntime.java"
     bundled_runtime = root / "waysgram/WaysGramApiRuntime.java"
@@ -65,7 +65,7 @@ def main() -> None:
 
     runtime_source = runtime.read_text(encoding="utf-8")
     required = (
-        "public static NexusGramApiClient getClient()",
+        "public static WaysGramApiClient getClient()",
         "public static boolean isConfigured()",
         "public static String getConfigurationError()",
         "WaysGramApiConfig.getBaseUrl(context)",
