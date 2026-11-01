@@ -200,6 +200,8 @@ class LoginActivity {
             waitingForEvent = false;
         }
     }
+    public class LoadingTextView extends TextView {
+    }
     private void onAuthSuccess(TLRPC.TL_auth_authorization res) {
     }
 }
