@@ -92,6 +92,25 @@ def main() -> int:
         elif old.read_bytes() != new.read_bytes():
             problems.append(f"modified original UI resource: {path.as_posix()}")
 
+    # LoginActivity receives behavior hooks, but it must not gain custom views.
+    reference_login = reference_ui / "LoginActivity.java"
+    current_login = current_ui / "LoginActivity.java"
+    if not reference_login.is_file() or not current_login.is_file():
+        problems.append("original or patched LoginActivity.java is missing")
+    else:
+        original_login = reference_login.read_text(encoding="utf-8")
+        patched_login = current_login.read_text(encoding="utf-8")
+        original_add_views = len(re.findall(r"\\baddView\\s*\\(", original_login))
+        patched_add_views = len(re.findall(r"\\baddView\\s*\\(", patched_login))
+        if patched_add_views > original_add_views:
+            problems.append(
+                f"LoginActivity added custom views: {original_add_views} original addView calls, "
+                f"{patched_add_views} after WaysGram integration"
+            )
+        for marker in ("WaysGramPortalActivity", "WaysGramHomeActivity", "waysGramButton", "testBackendCheckBox"):
+            if marker in patched_login:
+                problems.append(f"custom or debug UI remains in LoginActivity: {marker}")
+
     problems.extend(validate_app_names(cur_res))
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
     manifest_text = manifest.read_text(encoding="utf-8")
