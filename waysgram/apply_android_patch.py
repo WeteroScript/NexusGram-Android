@@ -41,11 +41,12 @@ auth_source = AUTH_SOURCE.read_text(encoding="utf-8")
 auth_contract = (
     "requestCode", "verifyCode", "restoreSession", "logout",
     "normalizePhone", "saveAccessToken", "getAccessToken", "api.getMe",
-    "auth.sendCode", "auth.signIn",
 )
 missing = [marker for marker in auth_contract if marker not in auth_source]
 if missing:
     raise SystemExit("WaysGram auth repository contract is incomplete: " + ", ".join(missing))
+if "new TLRPC.TL_auth_sendCode" in auth_source or "new TLRPC.TL_auth_signIn" in auth_source:
+    raise SystemExit("WaysGram auth repository must not use Telegram MTProto login")
 
 source = SETTINGS.read_text(encoding="utf-8")
 old_entry = '''        items.add(UItem.asShadow(null));
