@@ -29,6 +29,26 @@ def replace_once(path: Path, old: str, new: str, label: str) -> bool:
     return True
 
 
+def replace_regex_once(path: Path, pattern: str, replacement, label: str) -> bool:
+    source = path.read_text(encoding="utf-8")
+    matches = list(re.finditer(pattern, source, flags=re.MULTILINE))
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected exactly one {label} regex match in {path}; found {len(matches)}")
+    updated = re.sub(pattern, replacement, source, count=1, flags=re.MULTILINE)
+    path.write_text(updated, encoding="utf-8")
+    return True
+
+
+def insert_after_regex_once(path: Path, pattern: str, addition: str, label: str) -> bool:
+    source = path.read_text(encoding="utf-8")
+    matches = list(re.finditer(pattern, source, flags=re.MULTILINE))
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected exactly one {label} declaration in {path}; found {len(matches)}")
+    match = matches[0]
+    path.write_text(source[:match.end()] + addition + source[match.end():], encoding="utf-8")
+    return True
+
+
 def add_imports(path: Path, imports: str) -> bool:
     source = path.read_text(encoding="utf-8")
     if "import app.nexusgram.network.WaysGramApiRuntime;" in source:
@@ -56,25 +76,29 @@ def patch_login(root: Path) -> int:
         "import org.json.JSONObject;\n",
     )
 
-    phone_confirm_anchor = (
-        "                        confirmedNumber = true;\n"
-        "                        currentDoneType = DONE_TYPE_FLOATING;\n"
-        "                        needShowProgress(0, false);\n"
+    phone_confirm_pattern = (
+        r"^(?P<indent>[ \t]*)confirmedNumber = true;\n"
+        r"(?P=indent)currentDoneType = DONE_TYPE_FLOATING;\n"
+        r"(?P=indent)needShowProgress\(0, false\);"
     )
-    phone_confirm_replacement = phone_confirm_anchor + (
-        "                        if (WaysGramApiRuntime.isConfigured()) {\n"
-        "                            requestWaysGramCode();\n"
-        "                            return;\n"
-        "                        }\n"
+    phone_confirm_replacement = lambda match: (
+        match.group("indent") + "confirmedNumber = true;\n"
+        + match.group("indent") + "currentDoneType = DONE_TYPE_FLOATING;\n"
+        + match.group("indent") + "needShowProgress(0, false);\n"
+        + match.group("indent") + "if (WaysGramApiRuntime.isConfigured()) {\n"
+        + match.group("indent") + "    requestWaysGramCode();\n"
+        + match.group("indent") + "    return;\n"
+        + match.group("indent") + "}\n"
     )
-    changed += replace_once(
-        login,
-        phone_confirm_anchor,
-        phone_confirm_replacement,
-        "PhoneView confirmation handler",
-    )
+    if "requestWaysGramCode();" not in login.read_text(encoding="utf-8"):
+        changed += replace_regex_once(
+            login,
+            phone_confirm_pattern,
+            phone_confirm_replacement,
+            "PhoneView confirmation handler",
+        )
 
-    phone_method_anchor = "    public class PhoneView extends SlideView implements AdapterView.OnItemSelectedListener, NotificationCenter.NotificationCenterDelegate {\n"
+    phone_method_pattern = r"^[ \t]*(?:public )?class PhoneView\b[^\n]*\n"
     phone_method_body = """        private void requestWaysGramCode() {
             String digits = PhoneFormat.stripExceptNumbers(
                     "" + codeField.getText() + phoneField.getText());
@@ -129,19 +153,20 @@ def patch_login(root: Path) -> int:
         }
 
 """
-    changed += insert_after_once(
-        login,
-        phone_method_anchor,
-        phone_method_body,
-        "PhoneView onNextPressed",
-    )
+    if "private void requestWaysGramCode()" not in login.read_text(encoding="utf-8"):
+        changed += insert_after_regex_once(
+            login,
+            phone_method_pattern,
+            phone_method_body,
+            "PhoneView onNextPressed",
+        )
 
     sms_class_start = "    public class LoginActivitySmsView extends SlideView implements NotificationCenter.NotificationCenterDelegate {"
     if sms_class_start not in login.read_text(encoding="utf-8"):
         raise RuntimeError("LoginActivitySmsView declaration not found")
     source = login.read_text(encoding="utf-8")
     class_index = source.index(sms_class_start)
-    class_end_marker = "\\n    public class LoadingTextView"
+    class_end_marker = "\n    public class LoadingTextView"
     class_end = source.find(class_end_marker, class_index)
     if class_end < 0:
         raise RuntimeError("Could not locate the end of LoginActivitySmsView")
