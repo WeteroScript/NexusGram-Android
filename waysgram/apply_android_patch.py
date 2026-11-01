@@ -10,8 +10,10 @@ API_SOURCE = Path(__file__).with_name("WaysGramApiClient.java")
 API_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramApiClient.java"
 SESSION_SOURCE = Path(__file__).with_name("WaysGramSessionStore.java")
 SESSION_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramSessionStore.java"
+AUTH_SOURCE = Path(__file__).with_name("WaysGramAuthRepository.java")
+AUTH_TARGET = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/WaysGramAuthRepository.java"
 
-for required in (SETTINGS, PANEL_SOURCE, API_SOURCE, SESSION_SOURCE):
+for required in (SETTINGS, PANEL_SOURCE, API_SOURCE, SESSION_SOURCE, AUTH_SOURCE):
     if not required.is_file():
         raise SystemExit(f"Missing required WaysGram integration file: {required}")
 
@@ -34,6 +36,16 @@ session_contract = (
 missing = [marker for marker in session_contract if marker not in session_source]
 if missing:
     raise SystemExit("WaysGram session storage contract is incomplete: " + ", ".join(missing))
+
+auth_source = AUTH_SOURCE.read_text(encoding="utf-8")
+auth_contract = (
+    "requestCode", "verifyCode", "restoreSession", "logout",
+    "normalizePhone", "saveAccessToken", "getAccessToken", "api.getMe",
+    "auth.sendCode", "auth.signIn",
+)
+missing = [marker for marker in auth_contract if marker not in auth_source]
+if missing:
+    raise SystemExit("WaysGram auth repository contract is incomplete: " + ", ".join(missing))
 
 source = SETTINGS.read_text(encoding="utf-8")
 old_entry = '''        items.add(UItem.asShadow(null));
@@ -63,4 +75,6 @@ API_TARGET.parent.mkdir(parents=True, exist_ok=True)
 API_TARGET.write_text(api_source, encoding="utf-8")
 SESSION_TARGET.parent.mkdir(parents=True, exist_ok=True)
 SESSION_TARGET.write_text(session_source, encoding="utf-8")
-print("WaysGram admin panel, REST transport and Keystore session storage injected")
+AUTH_TARGET.parent.mkdir(parents=True, exist_ok=True)
+AUTH_TARGET.write_text(auth_source, encoding="utf-8")
+print("WaysGram admin panel, REST transport, Keystore storage and auth repository injected")
