@@ -17,14 +17,14 @@ Workflow собирает исходник из девяти частей `nexus
 
 ## Сохранение оригинального интерфейса
 
-Скрипты `waysgram/apply_native_ui_v11.py` и `waysgram/configure_api_client.py` автоматически запускаются в Android workflow после восстановления исходников. Второй скрипт внедряет адрес сервера из build secret в Android Manifest и добавляет `WaysGramApiConfig` для получения настройки приложением. Он:
+Скрипты `waysgram/apply_native_ui_v11.py` и `waysgram/configure_api_client.py` автоматически запускаются в Android workflow после восстановления исходников. Второй скрипт внедряет адрес сервера из build secret в Android Manifest и добавляет `WaysGramApiConfig` для получения настройки приложением. Третий скрипт устанавливает `WaysGramApiRuntime` и инициализирует один общий `NexusGramApiClient` из `ApplicationLoader`; native UI-классы получают его через `WaysGramApiRuntime.getClient()`. Он:
 - сохраняет штатный переход IntroActivity → LoginActivity;
 - удаляет отдельный WaysGram Portal CTA из LoginActivity;
 - снимает Portal/Home Activities с регистрации в Android Manifest и удаляет их Java-файлы после проверки, что на них нет внешних ссылок;
 - удаляет видимый переключатель `Test Backend` и его строковый ресурс;
 - проверяет, что исходный LoginActivity остаётся точкой входа.
 
-Скрипт `waysgram/configure_api_client.py` устанавливает REST-клиент из `waysgram/NexusGramApiClient.java` и helper конфигурации в штатное дерево проекта.
+Скрипт `waysgram/configure_api_client.py` устанавливает REST-клиент из `waysgram/NexusGramApiClient.java` и helper конфигурации в штатное дерево проекта. `waysgram/configure_api_runtime.py` подключает общий экземпляр в жизненный цикл приложения.
 
 Скрипт идемпотентен: повторное применение не меняет уже исправленные файлы. Он не перерисовывает штатные Telegram-экраны.
 
@@ -44,6 +44,6 @@ Workflow собирает исходник из девяти частей `nexus
 
 ## Исходники
 
-В репозитории хранятся части исходного архива и workflow восстановления. Скрипт восстановления UI находится в `waysgram/apply_native_ui_v11.py`.
+В репозитории хранятся части исходного архива и workflow восстановления. Скрипты автоматической подготовки находятся в `waysgram/`. Для них добавлен отдельный лёгкий workflow **WaysGram Android Patch Tests**, который проверяет повторяемость патчей на Python 3.11 и 3.12 без полной Android/NDK-сборки. Полная APK-сборка запускается вручную или при изменении исходных частей архива и основного workflow.
 
 Перед распространением APK необходимо проверить лицензии исходного проекта и используемых компонентов.
