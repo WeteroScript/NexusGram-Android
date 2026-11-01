@@ -1,4 +1,5 @@
-name: NexusGram Android APK
+name: WaysGram Android APK
+# Standalone client integration validation pass
 
 on:
   workflow_dispatch:
@@ -6,6 +7,10 @@ on:
     paths:
       - 'nexusgram.part*'
       - '.github/workflows/android.yml'
+      - 'waysgram/**'
+      - 'release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*'
+      - 'release/nexusgram-v4.patch.xz.b64'
+      - 'release/nexusgram-v5.patch.xz.b64'
 
 permissions:
   contents: read
@@ -88,44 +93,134 @@ jobs:
             echo "[OK] $file"
           done
 
-      - name: Repair malformed Java string literals
+      - name: Inject WaysGram admin panel into original Settings
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 waysgram/apply_android_patch.py
+
+      - name: Apply WaysGram branding and prepare the backend source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          parts=(release/NexusGram-Standalone-Repository-Bundle-v3.tar.xz.b64.part*)
+          if (( ${#parts[@]} != 15 )); then
+            echo "::error::Expected 15 backend source segments, found ${#parts[@]}"
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/waysgram-bundle"
+          cat "${parts[@]}" | base64 --decode > "$RUNNER_TEMP/waysgram-bundle.tar.xz"
+          xz --test "$RUNNER_TEMP/waysgram-bundle.tar.xz"
+          tar -xJf "$RUNNER_TEMP/waysgram-bundle.tar.xz" -C "$RUNNER_TEMP/waysgram-bundle"
+          base64 --decode release/nexusgram-v4.patch.xz.b64 > "$RUNNER_TEMP/waysgram-v4.patch.xz"
+          xz --test "$RUNNER_TEMP/waysgram-v4.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/waysgram-v4.patch.xz" | patch --directory="$RUNNER_TEMP/waysgram-bundle" --strip=1
+          base64 --decode release/nexusgram-v5.patch.xz.b64 > "$RUNNER_TEMP/waysgram-v5.patch.xz"
+          xz --test "$RUNNER_TEMP/waysgram-v5.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/waysgram-v5.patch.xz" | patch --directory="$RUNNER_TEMP/waysgram-bundle" --strip=1
+
+          test -s "$RUNNER_TEMP/waysgram-bundle/NexusGram-Termux-Backend/server.py"
+          rm -rf WaysGram-Backend
+          cp -a "$RUNNER_TEMP/waysgram-bundle/NexusGram-Termux-Backend" WaysGram-Backend
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          resources = Path("TMessagesProj/src/main/res")
+          count = 0
+          for path in resources.rglob("strings.xml"):
+              original = path.read_text(encoding="utf-8")
+              updated = re.sub(r'(<string\s+name="AppName">).*?(</string>)', r'\1WaysGram\2', original, count=1)
+              updated = re.sub(r'(<string\s+name="AppNameBeta">).*?(</string>)', r'\1WaysGram Beta\2', updated, count=1)
+              if updated != original:
+                  path.write_text(updated, encoding="utf-8")
+                  count += 1
+          if count == 0:
+              raise SystemExit("No localized AppName resources were updated")
+          print(f"Updated application name in {count} localized resource files")
+
+          for relative in ("WaysGram-Backend/server.py", "WaysGram-Backend/README_RU.txt", "WaysGram-Backend/static/admin.html"):
+              path = Path(relative)
+              if path.exists():
+                  value = path.read_text(encoding="utf-8")
+                  value = value.replace("NexusGram", "WaysGram").replace("Nexus Stars", "Ways Stars")
+                  path.write_text(value, encoding="utf-8")
+          PY
+
+          test ! -e TMessagesProj_App/src/main/java/app/nexusgram/standalone/MainActivity.java
+          if grep -Rqs 'app.nexusgram.standalone.MainActivity' TMessagesProj_App/src/main/AndroidManifest.xml; then
+            echo "::error::Standalone launcher registration unexpectedly remains"
+            exit 1
+          fi
+
+      - name: Apply and test WaysGram admin API integration
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base64 --decode waysgram/server-admin.patch.gz.b64 | gzip --decompress | patch --directory=WaysGram-Backend --strip=1
+          patch --directory=WaysGram-Backend --strip=1 < waysgram/server-profile.patch
+          python3 waysgram/apply_admin_web_ui.py
+          python3 waysgram/test_profile_api.py
+          python3 waysgram/test_admin_channel_roles.py
+          python3 waysgram/test_android_api_contract.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("WaysGram-Backend/tests/smoke_test.py")
+          source = path.read_text(encoding="utf-8")
+          source = source.replace("NexusGram TEST OTP", "WaysGram TEST OTP")
+          old = 'assert not re.search(r"\\b\\d{6}\\b", json.dumps(test_code_result))'
+          new = 'assert re.fullmatch(r"\\d{6}", test_code_result.get("test_code", "")), "Admin test-code endpoint must return a code only after authenticated allowlist validation"'
+          if old not in source:
+              raise SystemExit("Smoke-test OTP assertion was not found")
+          source = source.replace(old, new, 1)
+          old_brand = 'assert config["brand"] == "NexusGram"'
+          new_brand = 'assert config["brand"] == "WaysGram"'
+          if old_brand not in source:
+              raise SystemExit("Smoke-test brand assertion was not found")
+          source = source.replace(old_brand, new_brand, 1)
+          path.write_text(source, encoding="utf-8")
+          PY
+          python3 -m py_compile WaysGram-Backend/server.py WaysGram-Backend/tests/smoke_test.py
+          (cd WaysGram-Backend && python3 tests/smoke_test.py)
+
+      - name: Package complete WaysGram source ZIP
         shell: bash
         run: |
           set -Eeuo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import re
+          from zipfile import ZipFile, ZIP_DEFLATED
 
-          path = Path(
-              "TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java"
-          )
-
-          if not path.is_file():
-              raise SystemExit(f"Missing expected source file: {path}")
-
-          source = path.read_text()
-
-          pattern = re.compile(r'(\.append\(")(.*?)(?="\))', re.DOTALL)
-
-          repaired, count = pattern.subn(
-              lambda match: match.group(1) + match.group(2).replace(
-                  "\n", r"\n"
-              ),
-              source,
-          )
-
-          if count == 0:
-              raise SystemExit(
-                  "No multiline append string literals matched. "
-                  "Inspect DeveloperPanelActivity.java."
-              )
-
-          path.write_text(repaired)
-          print(f"Repaired {count} multiline append string literal(s)")
+          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
+          output = Path("WaysGram-Source.zip")
+          with ZipFile(output, "w", ZIP_DEFLATED, compresslevel=5) as archive:
+              for path in Path(".").rglob("*"):
+                  if not path.is_file():
+                      continue
+                  rel = path.relative_to(".")
+                  if any(part in excluded for part in rel.parts):
+                      continue
+                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
+                      continue
+                  if rel.parts and rel.parts[0] == "release":
+                      continue
+                  archive.write(path, rel.as_posix())
+          size = output.stat().st_size
+          if size < 1024 * 1024:
+              raise SystemExit(f"Source archive is unexpectedly small: {size} bytes")
+          print(f"Created WaysGram-Source.zip ({size} bytes)")
           PY
 
-          sed -n '270,310p' \
-            TMessagesProj/src/main/java/org/telegram/ui/DeveloperPanelActivity.java
+      - name: Upload WaysGram source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WaysGram-Source-ZIP
+          path: WaysGram-Source.zip
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -377,7 +472,7 @@ jobs:
           print(f"Firebase configuration verified for {expected}")
           PY
 
-      - name: Build NexusGram APK
+      - name: Build WaysGram APK
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -389,10 +484,10 @@ jobs:
             --max-workers=2 \
             :TMessagesProj_App:assembleAfatRelease
 
-      - name: Upload NexusGram APK
+      - name: Upload WaysGram APK
         uses: actions/upload-artifact@v4
         with:
-          name: NexusGram-APK
+          name: WaysGram-APK
           path: TMessagesProj_App/build/outputs/apk/afat/release/*.apk
           if-no-files-found: error
           retention-days: 14

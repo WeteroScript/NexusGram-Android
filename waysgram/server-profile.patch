@@ -1,0 +1,27 @@
+--- a/server.py
++++ b/server.py
+@@ -475,6 +475,24 @@
+                 if token:
+                     with db() as c: c.execute("DELETE FROM sessions WHERE token_hash=?", (token_hash(token),))
+                 self.send_json(200, {"status": "logged_out"}); return
++            if path == "/api/profile":
++                u = self.current_user(); fields = []; values = []
++                if "username" in data:
++                    username = clean_username(data["username"])
++                    with db() as c:
++                        if c.execute("SELECT 1 FROM users WHERE username=? COLLATE NOCASE AND id<>?", (username, u["id"])).fetchone():
++                            raise ApiError(409, "Username уже занят")
++                    fields.append("username=?"); values.append(username)
++                if "display_name" in data:
++                    name = str(data["display_name"]).strip()
++                    if len(name) > 60: raise ApiError(400, "Имя профиля слишком длинное")
++                    fields.append("display_name=?"); values.append(name)
++                if not fields: raise ApiError(400, "Нет полей для изменения")
++                values.append(u["id"])
++                with db() as c:
++                    c.execute("UPDATE users SET " + ",".join(fields) + " WHERE id=?", values)
++                    row = c.execute("SELECT * FROM users WHERE id=?", (u["id"],)).fetchone()
++                self.send_json(200, self.public_user(row, include_phone=True, include_stars=True)); return
+             if path == "/api/messages":
+                 u = self.current_user()
+                 try: recipient = int(data.get("recipient_id", 0))
