@@ -153,37 +153,6 @@ jobs:
             exit 1
           fi
 
-          python3 - <<'PY'
-          from pathlib import Path
-          from zipfile import ZipFile, ZIP_DEFLATED
-
-          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
-          with ZipFile("WaysGram-Source.zip", "w", ZIP_DEFLATED, compresslevel=5) as archive:
-              for path in Path(".").rglob("*"):
-                  if not path.is_file():
-                      continue
-                  rel = path.relative_to(".")
-                  if any(part in excluded for part in rel.parts):
-                      continue
-                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
-                      continue
-                  if rel.parts and rel.parts[0] == "release":
-                      continue
-                  archive.write(path, rel.as_posix())
-          size = Path("WaysGram-Source.zip").stat().st_size
-          if size < 1024 * 1024:
-              raise SystemExit(f"Source archive is unexpectedly small: {size} bytes")
-          print(f"Created WaysGram-Source.zip ({size} bytes)")
-          PY
-
-      - name: Upload WaysGram source ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: WaysGram-Source-ZIP
-          path: WaysGram-Source.zip
-          if-no-files-found: error
-          retention-days: 14
-
       - name: Repair malformed Java string literals
         shell: bash
         run: |
@@ -264,7 +233,43 @@ jobs:
 
           rustup target add --toolchain "${RUST_TOOLCHAIN}" \
             aarch64-linux-android \
-            armv7-linux-androideabi \
+            armv7-linux-an      - name: Package complete WaysGram source ZIP
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+
+          excluded = {".git", ".gradle", ".idea", "build", ".cxx", ".externalNativeBuild"}
+          output = Path("WaysGram-Source.zip")
+          with ZipFile(output, "w", ZIP_DEFLATED, compresslevel=5) as archive:
+              for path in Path(".").rglob("*"):
+                  if not path.is_file():
+                      continue
+                  rel = path.relative_to(".")
+                  if any(part in excluded for part in rel.parts):
+                      continue
+                  if path.name.startswith("nexusgram.part") or path.name == "nexusgram-source.zip":
+                      continue
+                  if rel.parts and rel.parts[0] == "release":
+                      continue
+                  archive.write(path, rel.as_posix())
+          size = output.stat().st_size
+          if size < 1024 * 1024:
+              raise SystemExit(f"Source archive is unexpectedly small: {size} bytes")
+          print(f"Created WaysGram-Source.zip ({size} bytes)")
+          PY
+
+      - name: Upload WaysGram source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WaysGram-Source-ZIP
+          path: WaysGram-Source.zip
+          if-no-files-found: error
+          retention-days: 14
+
+droideabi \
             i686-linux-android \
             x86_64-linux-android
 
