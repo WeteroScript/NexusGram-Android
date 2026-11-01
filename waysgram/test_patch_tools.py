@@ -91,6 +91,12 @@ void createLogin(Context context) {
             "</resources>\n",
         )
         write(
+            root / "TMessagesProj/src/main/res/values-ru/strings.xml",
+            "<resources>\\n"
+            "    <string name=\\"AppName\\">Telegram</string>\\n"
+            "</resources>\\n",
+        )
+        write(
             root / "TMessagesProj/build.gradle",
             "android {\n    defaultConfig {\n        minSdkVersion 23\n    }\n}\n",
         )
@@ -302,6 +308,8 @@ class SendMessagesHelper {
         assert "WaysGramHomeActivity" not in manifest
         assert "DebugTestBackend" not in strings
         assert '<string name="AppName">WaysGram</string>' in strings
+        russian_strings = (root / "TMessagesProj/src/main/res/values-ru/strings.xml").read_text(encoding="utf-8")
+        assert '<string name="AppName">WaysGram</string>' in russian_strings
         assert "app.nexusgram.API_BASE_URL" in manifest
         assert "waysgramApiBaseUrl" in gradle
         assert "WaysGramApiRuntime.initialize(applicationContext);" in app_loader
