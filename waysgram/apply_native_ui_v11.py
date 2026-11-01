@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Restore Telegram's native login entry point in an unpacked NexusGram source tree."""
+"""Apply WaysGram branding and restore the native login entry point."""
 from __future__ import annotations
 
 import argparse
@@ -106,6 +106,12 @@ def patch_strings(path: Path) -> bool:
         raise RuntimeError(f"Unexpected DebugTestBackend resource count: {count}")
     if 'name="DebugTestBackend"' in source:
         raise RuntimeError("DebugTestBackend string resource remains")
+    app_name_pattern = r'(<string\s+name="AppName">)(.*?)(</string>)'
+    source, app_name_count = re.subn(
+        app_name_pattern, r'\1WaysGram\3', source, count=1, flags=re.DOTALL
+    )
+    if app_name_count != 1:
+        raise RuntimeError(f"Expected exactly one AppName resource; found {app_name_count}")
     if source != original:
         path.write_text(source, encoding="utf-8")
         return True
@@ -167,7 +173,7 @@ def main() -> None:
         patch_strings(strings),
     ]
     removed = patch_obsolete_activities(root)
-    print(f"Native Telegram login UI verified. Updated {sum(changed)} source file(s); removed {removed} unreachable Portal/Home activity file(s).")
+    print(f"WaysGram native login UI verified. Updated {sum(changed)} source file(s); removed {removed} unreachable Portal/Home activity file(s).")
     print("No WaysGram Portal/Home entry point or visible Test Backend control remains.")
     print("This restores native navigation only; it does not yet replace MTProto auth or message transport.")
 
