@@ -71,7 +71,9 @@ void createLogin(Context context) {
         )
         write(
             root / "TMessagesProj/src/main/res/values/strings.xml",
-            '<resources><string name="DebugTestBackend">Test Backend</string></resources>\n',
+            "<resources>\n"
+            "    <string name=\"DebugTestBackend\">Test Backend</string>\n"
+            "</resources>\n",
         )
         write(
             root / "TMessagesProj/build.gradle",
