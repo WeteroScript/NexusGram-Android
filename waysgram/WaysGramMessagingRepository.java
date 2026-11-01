@@ -132,7 +132,7 @@ public final class WaysGramMessagingRepository {
         });
     }
 
-    private static <T> WaysGramApiClient.Callback listCallback(
+    private <T> WaysGramApiClient.Callback listCallback(
             String key, ModelFactory<T> factory, Callback<List<T>> callback) {
         return new WaysGramApiClient.Callback() {
             @Override
@@ -161,12 +161,13 @@ public final class WaysGramMessagingRepository {
 
             @Override
             public void onError(WaysGramApiClient.ApiError error) {
+                clearSessionIfUnauthorized(error);
                 callbackError(callback, error);
             }
         };
     }
 
-    private static WaysGramApiClient.Callback jsonCallback(Callback<JSONObject> callback) {
+    private WaysGramApiClient.Callback jsonCallback(Callback<JSONObject> callback) {
         return new WaysGramApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject response) {
@@ -175,9 +176,22 @@ public final class WaysGramMessagingRepository {
 
             @Override
             public void onError(WaysGramApiClient.ApiError error) {
+                clearSessionIfUnauthorized(error);
                 callbackError(callback, error);
             }
         };
+    }
+
+    private void clearSessionIfUnauthorized(WaysGramApiClient.ApiError error) {
+        if (error != null && error.statusCode == 401) {
+            STORAGE.execute(() -> {
+                try {
+                    sessions.clear();
+                } catch (GeneralSecurityException | IOException ignored) {
+                    // Keep the original API error as the user-visible failure.
+                }
+            });
+        }
     }
 
     private interface ModelFactory<T> {
