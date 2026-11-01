@@ -425,7 +425,7 @@ def patch_messages_controller(root: Path) -> int:
     load_dialogs_anchor = (
         "    public void loadDialogs(final int folderId, int offset, int count, boolean fromCache, Runnable onEmptyCallback) {\n"
     )
-    load_dialogs_code = """        if (WaysGramApiRuntime.isSignedIn()) {
+    load_dialogs_code = """        if (WaysGramApiRuntime.isWaysGramMode()) {
             if (loadingDialogs.get(folderId) || resetingDialogs) {
                 return;
             }
@@ -484,7 +484,7 @@ def patch_messages_controller(root: Path) -> int:
     load_messages_anchor = (
         "            final TLRPC.Chat chat = dialogId < 0 ? getChat(-dialogId): null;\n"
     )
-    load_messages_code = """            if (WaysGramApiRuntime.isSignedIn()) {
+    load_messages_code = """            if (WaysGramApiRuntime.isWaysGramMode()) {
                 if (dialogId <= 0 || mergeDialogId != 0 || mode != ChatActivity.MODE_DEFAULT
                         || threadMessageId != 0 || isTopic
                         || (load_type != 0 && load_type != 1 && load_type != 2)) {
@@ -607,7 +607,7 @@ def patch_send_helper(root: Path) -> int:
     )
 
     anchor = "    public void sendMessage(SendMessageParams sendMessageParams) {\n"
-    code = """        if (WaysGramApiRuntime.isSignedIn()) {
+    code = """        if (WaysGramApiRuntime.isWaysGramMode()) {
             final long waysGramPeer = sendMessageParams.peer;
             final String waysGramText = sendMessageParams.message;
             boolean textOnly = waysGramPeer > 0 && !TextUtils.isEmpty(waysGramText)
