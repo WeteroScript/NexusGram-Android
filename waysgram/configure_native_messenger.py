@@ -74,7 +74,11 @@ def patch_login(root: Path) -> int:
         "PhoneView confirmation handler",
     )
 
-    phone_method_anchor = "        @Override\n        public void onNextPressed(String code) {\n"
+    phone_method_anchor = (
+        "        @Override\n"
+        "        public void onNextPressed(String code) {\n"
+        "            if (getParentActivity() == null || nextPressed || isRequestingFirebaseSms) {\n"
+    )
     phone_method_body = """        private void requestWaysGramCode() {
             String digits = PhoneFormat.stripExceptNumbers(
                     "" + codeField.getText() + phoneField.getText());
