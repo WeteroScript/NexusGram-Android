@@ -73,7 +73,7 @@ def patch_manifest(path: Path) -> bool:
     original = source
     for activity in ("WaysGramPortalActivity", "WaysGramHomeActivity"):
         pattern = (
-            r"\s*<activity\b(?=[^>]*android:name=\"app\.nexusgram\.ui\."
+            r"\s*<activity\b(?=[^>]*android:name=\"app\.waysgram\.ui\."
             + re.escape(activity)
             + r"\")[^>]*/>"
         )
