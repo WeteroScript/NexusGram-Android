@@ -51,7 +51,7 @@ def insert_after_regex_once(path: Path, pattern: str, addition: str, label: str)
 
 def add_imports(path: Path, imports: str) -> bool:
     source = path.read_text(encoding="utf-8")
-    if "import app.nexusgram.network.WaysGramApiRuntime;" in source:
+    if "import app.waysgram.network.WaysGramApiRuntime;" in source:
         return False
     package_end = source.find("\n", source.find("package "))
     if package_end < 0:
@@ -70,9 +70,9 @@ def patch_login(root: Path) -> int:
     changed = 0
     changed += add_imports(
         login,
-        "import app.nexusgram.network.WaysGramApiClient;\n"
-        "import app.nexusgram.network.WaysGramApiRuntime;\n"
-        "import app.nexusgram.network.WaysGramDataMapper;\n"
+        "import app.waysgram.network.WaysGramApiClient;\n"
+        "import app.waysgram.network.WaysGramApiRuntime;\n"
+        "import app.waysgram.network.WaysGramDataMapper;\n"
         "import org.json.JSONObject;\n",
     )
 
@@ -417,9 +417,9 @@ def patch_messages_controller(root: Path) -> int:
     changed = 0
     changed += add_imports(
         path,
-        "import app.nexusgram.network.WaysGramApiClient;\n"
-        "import app.nexusgram.network.WaysGramApiRuntime;\n"
-        "import app.nexusgram.network.WaysGramDataMapper;\n",
+        "import app.waysgram.network.WaysGramApiClient;\n"
+        "import app.waysgram.network.WaysGramApiRuntime;\n"
+        "import app.waysgram.network.WaysGramDataMapper;\n",
     )
 
     load_dialogs_anchor = (
@@ -601,9 +601,9 @@ def patch_send_helper(root: Path) -> int:
     changed = 0
     changed += add_imports(
         path,
-        "import app.nexusgram.network.WaysGramApiClient;\n"
-        "import app.nexusgram.network.WaysGramApiRuntime;\n"
-        "import app.nexusgram.network.WaysGramDataMapper;\n",
+        "import app.waysgram.network.WaysGramApiClient;\n"
+        "import app.waysgram.network.WaysGramApiRuntime;\n"
+        "import app.waysgram.network.WaysGramDataMapper;\n",
     )
 
     anchor = "    public void sendMessage(SendMessageParams sendMessageParams) {\n"
