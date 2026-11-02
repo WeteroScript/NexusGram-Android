@@ -1,11 +1,14 @@
 name: WaysGram Android APK
 
+concurrency:
+  group: waysgram-android-apk
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
     paths:
       - 'nexusgram.part*'
-      - 'waysgram/**'
       - '.github/workflows/android.yml'
 
 permissions:
