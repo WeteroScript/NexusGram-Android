@@ -67,8 +67,8 @@ def main() -> None:
     gradle = root / "TMessagesProj/build.gradle"
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
     client_source = root / "waysgram/WaysGramApiClient.java"
-    client = root / "TMessagesProj/src/main/java/app/nexusgram/network/WaysGramApiClient.java"
-    config = root / "TMessagesProj/src/main/java/app/nexusgram/network/WaysGramApiConfig.java"
+    client = root / "TMessagesProj/src/main/java/app/waysgram/network/WaysGramApiClient.java"
+    config = root / "TMessagesProj/src/main/java/app/waysgram/network/WaysGramApiConfig.java"
     for path in (gradle, manifest, client_source):
         if not path.is_file():
             raise SystemExit(f"Missing required source file: {path}")
