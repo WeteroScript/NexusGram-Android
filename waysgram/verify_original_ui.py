@@ -39,14 +39,14 @@ def extract_java_block(source: str, signature: str) -> str:
         char = source[index]
         next_char = source[index + 1] if index + 1 < len(source) else ""
         if state == "line_comment":
-            if char == "\\n":
+            if char == "\n":
                 state = "code"
         elif state == "block_comment":
             if char == "*" and next_char == "/":
                 state = "code"
                 index += 1
         elif state in ("string", "char"):
-            if char == "\\\\":
+            if char == "\\":
                 index += 1
             elif (state == "string" and char == '"') or (state == "char" and char == "'"):
                 state = "code"
