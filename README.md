@@ -25,7 +25,7 @@ Workflow собирает исходник из девяти архивных ч
 - Сетевые классы и их внутренний Java namespace находятся в `app.waysgram.network`; старый пакет больше не используется для WaysGram-кода.
 - `configure_native_messenger.py` подключает WaysGram REST к штатным `LoginActivity.PhoneView` / SMS code view, `MessagesController` и `SendMessagesHelper`.
 - `WaysGramDataMapper.java` переводит серверные профили, диалоги и текстовые сообщения в native-модели для отображения существующими `DialogsActivity` и `ChatActivity`.
-- `verify_original_ui.py` на каждой полной сборке сравнивает исходники всех экранов `org/telegram/ui` (кроме LoginActivity, куда добавлены только обработчики WaysGram-входа) с оригинальным архивом; также побайтово проверяет остальные UI Java-классы и Android UI-ресурсы. Все ресурсы, кроме локализованных `strings.xml`, должны оставаться идентичными оригиналу.
+- `verify_original_ui.py` на каждой полной сборке сравнивает исходники всех экранов `org/telegram/ui` с оригинальным архивом. В `LoginActivity` отдельно сравниваются `createView`, конструктор SMS-экрана, конструктор `PhoneView` и `PhoneView.updateColors()`; допускается только удаление старого Test Backend и его оформления. Остальные UI Java-классы и Android UI-ресурсы должны совпадать с оригиналом побайтово. В локализованных `strings.xml` разрешены только смена `AppName` на WaysGram и удаление отладочной строки Test Backend.
 
 Патчи идемпотентны. Отдельный workflow **WaysGram Android Patch Tests** проверяет их повторное применение и проверку сохранения оригинального интерфейса на Python 3.11 и 3.12 без полной Android/NDK-сборки. Изменения в `waysgram/**` также запускают полную APK-сборку.
 
