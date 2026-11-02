@@ -1,4 +1,4 @@
-package app.nexusgram.network;
+package app.waysgram.network;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
