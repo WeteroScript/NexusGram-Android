@@ -43,7 +43,7 @@ def main() -> None:
         )
         write(
             source / "org/telegram/ui/LoginActivity.java",
-            """import app.nexusgram.ui.WaysGramPortalActivity;
+            """import app.waysgram.ui.WaysGramPortalActivity;
         private CheckBoxCell testBackendCheckBox;
 boolean testBackend = false;
 void createLogin(Context context) {
@@ -77,8 +77,8 @@ void createLogin(Context context) {
         write(
             root / "TMessagesProj/src/main/AndroidManifest.xml",
             """<manifest><application>
-<activity android:name="app.nexusgram.ui.WaysGramPortalActivity" />
-<activity android:name="app.nexusgram.ui.WaysGramHomeActivity" />
+<activity android:name="app.waysgram.ui.WaysGramPortalActivity" />
+<activity android:name="app.waysgram.ui.WaysGramHomeActivity" />
         <!-- usesCleartextTraffic for browser supporting opening http:// links -->
 </application></manifest>
 """,
@@ -116,7 +116,7 @@ public class ApplicationLoader {
         write(
             source / "org/telegram/ui/LoginActivity.java",
             """package org.telegram.ui;
-import app.nexusgram.ui.WaysGramPortalActivity;
+import app.waysgram.ui.WaysGramPortalActivity;
         private CheckBoxCell testBackendCheckBox;
 boolean testBackend = false;
 class LoginActivity {
@@ -277,11 +277,11 @@ class SendMessagesHelper {
 
         write(
             source / "app/nexusgram/ui/WaysGramPortalActivity.java",
-            "package app.nexusgram.ui; class WaysGramPortalActivity {}\n",
+            "package app.waysgram.ui; class WaysGramPortalActivity {}\n",
         )
         write(
             source / "app/nexusgram/ui/WaysGramHomeActivity.java",
-            "package app.nexusgram.ui; class WaysGramHomeActivity {}\n",
+            "package app.waysgram.ui; class WaysGramHomeActivity {}\n",
         )
 
         scripts = (
@@ -310,10 +310,10 @@ class SendMessagesHelper {
         assert '<string name="AppName">WaysGram</string>' in strings
         russian_strings = (root / "TMessagesProj/src/main/res/values-ru/strings.xml").read_text(encoding="utf-8")
         assert '<string name="AppName">WaysGram</string>' in russian_strings
-        assert "app.nexusgram.API_BASE_URL" in manifest
+        assert "app.waysgram.API_BASE_URL" in manifest
         assert "waysgramApiBaseUrl" in gradle
         assert "WaysGramApiRuntime.initialize(applicationContext);" in app_loader
-        assert "import app.nexusgram.network.WaysGramApiRuntime;" in app_loader
+        assert "import app.waysgram.network.WaysGramApiRuntime;" in app_loader
         assert (source / "app/nexusgram/network/WaysGramApiClient.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramApiConfig.java").is_file()
         assert (source / "app/nexusgram/network/WaysGramApiRuntime.java").is_file()
