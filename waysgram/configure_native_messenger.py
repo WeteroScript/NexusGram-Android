@@ -265,7 +265,12 @@ def patch_login(root: Path) -> int:
         sms = sms.replace(sms_instruction_anchor, sms_instruction_new, 1)
         changed += 1
 
-    instruction_method_anchor = "        @Override\\n        public void setParams(Bundle params, boolean restore) {\\n"
+    instruction_method_anchor = (
+        "        @Override\n"
+        "        public void setParams(Bundle params, boolean restore) {\n"
+    )
+    if instruction_method_anchor not in sms:
+        instruction_method_anchor = "        public void setParams(Bundle params, boolean restore) {\n"
     instruction_method = (
         "        private String waysgramInstruction() {\n"
         "            if (currentParams != null) {\n"
