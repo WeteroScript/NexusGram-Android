@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-CONFIG_JAVA = '''package app.nexusgram.network;
+CONFIG_JAVA = '''package app.waysgram.network;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -13,7 +13,7 @@ import android.os.Bundle;
 
 /** Reads the single production WaysGram API endpoint injected by the Android build. */
 public final class WaysGramApiConfig {
-    private static final String META_DATA_KEY = "app.nexusgram.API_BASE_URL";
+    private static final String META_DATA_KEY = "app.waysgram.API_BASE_URL";
 
     private WaysGramApiConfig() {
     }
@@ -91,7 +91,7 @@ def main() -> None:
     manifest_placeholder = "$" + "{waysgramApiBaseUrl}"
     manifest_anchor = "        <!-- usesCleartextTraffic for browser supporting opening http:// links -->"
     manifest_replacement = (
-        '        <meta-data android:name="app.nexusgram.API_BASE_URL" android:value="'
+        '        <meta-data android:name="app.waysgram.API_BASE_URL" android:value="'
         + manifest_placeholder + '" />\n\n' + manifest_anchor
     )
     changed += update_once(
@@ -120,7 +120,7 @@ def main() -> None:
     client_source = client.read_text(encoding="utf-8")
     if "waysgramApiBaseUrl" not in gradle_source:
         raise RuntimeError("Gradle does not define the waysgramApiBaseUrl manifest placeholder")
-    if 'android:name="app.nexusgram.API_BASE_URL"' not in manifest_source:
+    if 'android:name="app.waysgram.API_BASE_URL"' not in manifest_source:
         raise RuntimeError("Android manifest does not expose the WaysGram API endpoint")
     if 'optString("detail", json.optString("error"' not in client_source:
         raise RuntimeError("Android REST client does not handle FastAPI detail errors")
