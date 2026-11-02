@@ -101,8 +101,8 @@ def validate_login_view_methods(original: str, current: str) -> list[str]:
     if phone_signature in blocks:
         original_phone, current_phone = blocks[phone_signature]
         expected_phone, count = re.subn(
-            r"^[ \\t]*final boolean allowTestBackend = [^\\n]*\\n.*?(?=^[ \\t]*if \\(bottomMargin > 0)",
-            "\\n",
+            r"^[ \t]*final boolean allowTestBackend = [^\n]*\n.*?(?=^[ \t]*if \(bottomMargin > 0)",
+            "\n",
             original_phone,
             count=1,
             flags=re.MULTILINE | re.DOTALL,
@@ -110,11 +110,11 @@ def validate_login_view_methods(original: str, current: str) -> list[str]:
         if count not in (0, 1):
             problems.append(f"Unexpected Test Backend block count in {phone_signature}: {count}")
         expected_phone, custom_count = re.subn(
-            r"^[ \\t]*if \\(activityMode == MODE_LOGIN\\) \\{\\s*"
-            r"TextView waysGramButton = new TextView\\(context\\);.*?"
-            r"^[ \\t]*addView\\(waysGramButton, waysGramParams\\);\\s*"
-            r"^[ \\t]*\\}\\s*",
-            "\\n",
+            r"^[ \t]*if \(activityMode == MODE_LOGIN\) \{\s*"
+            r"TextView waysGramButton = new TextView\(context\);.*?"
+            r"^[ \t]*addView\(waysGramButton, waysGramParams\);\s*"
+            r"^[ \t]*\}\s*",
+            "\n",
             expected_phone,
             count=1,
             flags=re.MULTILINE | re.DOTALL,
