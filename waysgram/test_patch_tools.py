@@ -351,7 +351,19 @@ class SendMessagesHelper {
         write(root / "TMessagesProj/src/main/res/layout/main.xml", "<LinearLayout />\n")
         write(reference_res / "drawable/original.xml", "<shape />\n")
         write(root / "TMessagesProj/src/main/res/drawable/original.xml", "<shape />\n")
-        write(reference_res / "values/strings.xml", "<resources><string name=\"AppName\">Telegram</string></resources>\n")
+        write(
+            reference_res / "values/strings.xml",
+            "<resources>\n"
+            "    <string name=\"AppName\">Telegram</string>\n"
+            "    <string name=\"DebugTestBackend\">Test Backend</string>\n"
+            "</resources>\n",
+        )
+        write(
+            reference_res / "values-ru/strings.xml",
+            "<resources>\n"
+            "    <string name=\"AppName\">Telegram</string>\n"
+            "</resources>\n",
+        )
         verify = subprocess.run(
             [
                 sys.executable,
