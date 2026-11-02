@@ -22,6 +22,7 @@ Workflow собирает исходник из девяти архивных ч
 - `apply_native_ui_v11.py` сохраняет переход IntroActivity → оригинальный LoginActivity, удаляет только прежний самодельный WaysGram Portal CTA и отладочный переключатель `Test Backend`; все `values*/strings.xml` получают единое имя приложения WaysGram.
 - `configure_api_client.py` устанавливает REST-клиент, читает HTTPS endpoint из build-time manifest metadata и добавляет `WaysGramApiConfig`.
 - `configure_api_runtime.py` инициализирует единый экземпляр `WaysGramApiClient` в `ApplicationLoader`.
+- Сетевые классы и их внутренний Java namespace находятся в `app.waysgram.network`; старый пакет больше не используется для WaysGram-кода.
 - `configure_native_messenger.py` подключает WaysGram REST к штатным `LoginActivity.PhoneView` / SMS code view, `MessagesController` и `SendMessagesHelper`.
 - `WaysGramDataMapper.java` переводит серверные профили, диалоги и текстовые сообщения в native-модели для отображения существующими `DialogsActivity` и `ChatActivity`.
 - `verify_original_ui.py` на каждой полной сборке сравнивает исходники всех экранов `org/telegram/ui` (кроме LoginActivity, куда добавлены только обработчики WaysGram-входа) с оригинальным архивом; также побайтово проверяет остальные UI Java-классы и Android UI-ресурсы. Все ресурсы, кроме локализованных `strings.xml`, должны оставаться идентичными оригиналу.
@@ -55,5 +56,7 @@ Workflow собирает исходник из девяти архивных ч
 ## Исходники
 
 В репозитории хранятся части исходного Android-архива и repeatable patch scripts в `waysgram/`. Полная Android-сборка выполняется GitHub Actions с восстановлением исходников и сборкой native-библиотек.
+
+Технический Android `applicationId` пока остаётся `app.nexusgram`, поскольку текущий Firebase-конфиг привязан именно к нему. Это системный идентификатор приложения, а не отображаемое название; его смена требует нового Firebase Android app и соответствующего `google-services.json`.
 
 Перед распространением APK необходимо проверить лицензии исходного проекта и используемых компонентов.
