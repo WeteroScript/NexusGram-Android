@@ -1,5 +1,9 @@
 name: WaysGram Android Patch Tests
 
+concurrency:
+  group: waysgram-patch-tests
+  cancel-in-progress: true
+
 on:
   push:
     paths:
