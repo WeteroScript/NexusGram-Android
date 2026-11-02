@@ -73,73 +73,79 @@ def extract_java_block(source: str, signature: str) -> str:
 
 def validate_login_view_methods(original: str, current: str) -> list[str]:
     problems: list[str] = []
-    signatures = (
-        "public View createView(Context context)",
-        "public PhoneView(Context context)",
-        "public LoginActivitySmsView(Context context, @AuthType int type)",
-    )
-    blocks: dict[str, tuple[str, str]] = {}
-    for signature in signatures:
-        if signature not in original and signature not in current:
-            continue
-        try:
-            blocks[signature] = (
-                extract_java_block(original, signature),
-                extract_java_block(current, signature),
-            )
-        except RuntimeError as error:
-            problems.append(str(error))
 
     for signature in (
         "public View createView(Context context)",
         "public LoginActivitySmsView(Context context, @AuthType int type)",
     ):
-        if signature in blocks and blocks[signature][0] != blocks[signature][1]:
-            problems.append(f"Original LoginActivity layout method was modified: {signature}")
+        if signature not in original and signature not in current:
+            continue
+        try:
+            original_block = extract_java_block(original, signature)
+            current_block = extract_java_block(current, signature)
+            if original_block != current_block:
+                problems.append(f"Original LoginActivity layout method was modified: {signature}")
+        except RuntimeError as error:
+            problems.append(str(error))
 
-    phone_signature = "public PhoneView(Context context)"
-    if phone_signature in blocks:
-        original_phone, current_phone = blocks[phone_signature]
-        expected_phone, count = re.subn(
+    phone_class_signature = (
+        "public class PhoneView extends SlideView implements "
+        "AdapterView.OnItemSelectedListener, NotificationCenter.NotificationCenterDelegate"
+    )
+    if phone_class_signature not in original and phone_class_signature not in current:
+        return problems
+    try:
+        original_class = extract_java_block(original, phone_class_signature)
+        current_class = extract_java_block(current, phone_class_signature)
+        original_constructor = extract_java_block(original_class, "public PhoneView(Context context)")
+        current_constructor = extract_java_block(current_class, "public PhoneView(Context context)")
+        expected_constructor, count = re.subn(
             r"^[ \t]*final boolean allowTestBackend = [^\n]*\n.*?(?=^[ \t]*if \(bottomMargin > 0)",
             "\n",
-            original_phone,
+            original_constructor,
             count=1,
             flags=re.MULTILINE | re.DOTALL,
         )
-        if count not in (0, 1):
-            problems.append(f"Unexpected Test Backend block count in {phone_signature}: {count}")
-        expected_phone, custom_count = re.subn(
+        if count != 1:
+            problems.append(f"Expected one original Test Backend row in PhoneView, found {count}")
+        expected_constructor, custom_count = re.subn(
             r"^[ \t]*if \(activityMode == MODE_LOGIN\) \{\s*"
             r"TextView waysGramButton = new TextView\(context\);.*?"
             r"^[ \t]*addView\(waysGramButton, waysGramParams\);\s*"
             r"^[ \t]*\}\s*",
             "\n",
-            expected_phone,
+            expected_constructor,
             count=1,
             flags=re.MULTILINE | re.DOTALL,
         )
         if custom_count not in (0, 1):
-            problems.append(f"Unexpected custom WaysGram button count in {phone_signature}: {custom_count}")
-        expected_phone, color_count = re.subn(
+            problems.append(f"Unexpected custom WaysGram button count in PhoneView: {custom_count}")
+        if expected_constructor != current_constructor:
+            problems.append(
+                "PhoneView constructor differs from the original after removing only the Test Backend row"
+            )
+
+        original_colors = extract_java_block(original_class, "public void updateColors()")
+        current_colors = extract_java_block(current_class, "public void updateColors()")
+        expected_colors, color_count = re.subn(
             r"^[ \t]*if \(testBackendCheckBox != null\) \{\s*"
             r"testBackendCheckBox\.setSquareCheckBoxColor\([^;]+;\s*"
             r"testBackendCheckBox\.updateTextColor\(\);\s*"
             r"^[ \t]*\}\s*",
             "\n",
-            expected_phone,
+            original_colors,
             count=1,
             flags=re.MULTILINE | re.DOTALL,
         )
-        if color_count not in (0, 1):
-            problems.append(f"Unexpected Test Backend color block count in {phone_signature}: {color_count}")
-        for marker in ("allowTestBackend", "testBackendCheckBox", "waysGramButton"):
-            if marker in current_phone:
-                problems.append(f"Custom or debug UI remains inside {phone_signature}: {marker}")
-        if expected_phone != current_phone:
-            problems.append(
-                "PhoneView constructor differs from the original apart from removal of the Test Backend row"
-            )
+        if color_count != 1:
+            problems.append(f"Expected one original Test Backend color block, found {color_count}")
+        if expected_colors != current_colors:
+            problems.append("PhoneView.updateColors differs from the original after removing the Test Backend styling block")
+        if "testBackendCheckBox" in current_class:
+            problems.append("Test Backend UI references remain inside PhoneView")
+    except RuntimeError as error:
+        problems.append(str(error))
+
     return problems
 
 
