@@ -45,7 +45,7 @@ def main() -> None:
         app_loader,
         "import org.telegram.ui.LauncherIconController;\n",
         "import org.telegram.ui.LauncherIconController;\n"
-        "import app.nexusgram.network.WaysGramApiRuntime;\n",
+        "import app.waysgram.network.WaysGramApiRuntime;\n",
         "ApplicationLoader WaysGram runtime import",
     )
     changed |= replace_once(
@@ -58,7 +58,7 @@ def main() -> None:
     )
 
     source = app_loader.read_text(encoding="utf-8")
-    if "import app.nexusgram.network.WaysGramApiRuntime;" not in source:
+    if "import app.waysgram.network.WaysGramApiRuntime;" not in source:
         raise RuntimeError("WaysGramApiRuntime import was not installed")
     if "WaysGramApiRuntime.initialize(applicationContext);" not in source:
         raise RuntimeError("WaysGramApiRuntime initialization was not installed")
