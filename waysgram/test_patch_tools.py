@@ -419,9 +419,15 @@ class SendMessagesHelper {
         assert "api.requestCode(virtualPhone" in login
         assert "api.verifyCode(waysgramPhone, code" in login
         assert "onWaysGramAuthSuccess(response)" in login
-        assert "activityMode != MODE_LOGIN" in login
+        assert "if (activityMode == MODE_LOGIN)" in login
         assert "WaysGramApiRuntime.getConfigurationError()" in login
         assert "if (!WaysGramApiRuntime.isConfigured())" in login
+        confirm_start = login.index("void onConfirm()")
+        confirm_end = login.index("\n        }\n        @Override", confirm_start)
+        confirm_handler = login[confirm_start:confirm_end]
+        assert "requestWaysGramCode();" in confirm_handler
+        assert "requestPhonePermissions();" in confirm_handler
+        assert confirm_handler.index("requestWaysGramCode();") < confirm_handler.index("requestPhonePermissions();")
         controller = (source / "org/telegram/messenger/MessagesController.java").read_text(encoding="utf-8")
         sender = (source / "org/telegram/messenger/SendMessagesHelper.java").read_text(encoding="utf-8")
         assert "api.getConversations(" in controller
