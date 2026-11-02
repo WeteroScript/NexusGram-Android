@@ -1,4 +1,4 @@
-package app.nexusgram.network;
+package app.waysgram.network;
 
 import android.content.Context;
 import android.util.Log;
