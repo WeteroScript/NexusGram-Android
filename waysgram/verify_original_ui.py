@@ -39,8 +39,8 @@ def validate_string_resources(reference_root: Path, current_root: Path) -> list[
         if unexpected:
             problems.append("unexpected locale strings resources: " + ", ".join(unexpected))
 
-    debug_pattern = r"^[ \\t]*<string name=\\"DebugTestBackend\\">.*?</string>\\s*\\n?"
-    app_name_pattern = r'(<string\\s+name=\\"AppName\\">)(.*?)(</string>)'
+    debug_pattern = r'^[ \t]*<string name="DebugTestBackend">.*?</string>\s*\n?'
+    app_name_pattern = r'(<string\s+name="AppName">)(.*?)(</string>)'
     for relative in sorted(reference_files & current_files):
         original = (reference_root / relative).read_text(encoding="utf-8")
         expected, debug_count = re.subn(
@@ -49,7 +49,7 @@ def validate_string_resources(reference_root: Path, current_root: Path) -> list[
         if debug_count not in (0, 1):
             problems.append(f"{relative}: unexpected DebugTestBackend count {debug_count}")
         expected, app_name_count = re.subn(
-            app_name_pattern, r"\\1WaysGram\\3", expected, count=1, flags=re.DOTALL
+            app_name_pattern, r'\1WaysGram\3', expected, count=1, flags=re.DOTALL
         )
         if app_name_count != 1:
             problems.append(f"{relative}: expected exactly one original AppName resource")
@@ -149,11 +149,11 @@ def main() -> int:
                 problems.append("could not identify the removed original Test Backend row")
             else:
                 removed_original_views += len(
-                    re.findall(r"\\baddView\\s*\\(", original_login[start:end])
+                    re.findall(r"\baddView\s*\(", original_login[start:end])
                 )
         if "waysGramButton" in original_login:
             removed_original_views += len(
-                re.findall(r"addView\\s*\\(\\s*waysGramButton", original_login)
+                re.findall(r"addView\s*\(\s*waysGramButton", original_login)
             )
         expected_add_views = original_add_views - removed_original_views
         if patched_add_views != expected_add_views:
