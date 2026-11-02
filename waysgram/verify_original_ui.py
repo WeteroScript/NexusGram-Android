@@ -106,8 +106,12 @@ def validate_login_view_methods(original: str, current: str) -> list[str]:
             count=1,
             flags=re.MULTILINE | re.DOTALL,
         )
-        if count != 1:
-            problems.append(f"Expected one original Test Backend row in PhoneView, found {count}")
+        has_test_backend_row = "final boolean allowTestBackend =" in original_constructor
+        if count != int(has_test_backend_row):
+            problems.append(
+                "Could not identify the original Test Backend row in PhoneView "
+                "even though its source anchor is present"
+            )
         expected_constructor, custom_count = re.subn(
             r"^[ \t]*if \(activityMode == MODE_LOGIN\) \{\s*"
             r"TextView waysGramButton = new TextView\(context\);.*?"
@@ -137,8 +141,12 @@ def validate_login_view_methods(original: str, current: str) -> list[str]:
             count=1,
             flags=re.MULTILINE | re.DOTALL,
         )
-        if color_count != 1:
-            problems.append(f"Expected one original Test Backend color block, found {color_count}")
+        has_test_backend_color_block = "if (testBackendCheckBox != null)" in original_colors
+        if color_count != int(has_test_backend_color_block):
+            problems.append(
+                "Could not identify the original Test Backend color block "
+                "even though its source anchor is present"
+            )
         if expected_colors != current_colors:
             problems.append("PhoneView.updateColors differs from the original after removing the Test Backend styling block")
         if "testBackendCheckBox" in current_class:
