@@ -85,18 +85,18 @@ def verify_login_view_variants() -> None:
     }
     """
     patched_snapshot, row_count = re.subn(
-        r"^[ \\t]*final boolean allowTestBackend = [^\\n]*\\n.*?(?=^[ \\t]*if \\(bottomMargin > 0)",
-        "\\n",
+        r"^[ \t]*final boolean allowTestBackend = [^\n]*\n.*?(?=^[ \t]*if \(bottomMargin > 0)",
+        "\n",
         original_snapshot,
         count=1,
         flags=re.MULTILINE | re.DOTALL,
     )
     patched_snapshot, color_count = re.subn(
-        r"^[ \\t]*if \\(testBackendCheckBox != null) \\{\\s*"
-        r"testBackendCheckBox\\.setSquareCheckBoxColor\\([^;]+;\\s*"
-        r"testBackendCheckBox\\.updateTextColor\\(\\);\\s*"
-        r"^[ \\t]*\\}\\s*",
-        "\\n",
+        r"^[ \t]*if \(testBackendCheckBox != null\) \{\s*"
+        r"testBackendCheckBox\.setSquareCheckBoxColor\([^;]+;\s*"
+        r"testBackendCheckBox\.updateTextColor\(\);\s*"
+        r"^[ \t]*\}\s*",
+        "\n",
         patched_snapshot,
         count=1,
         flags=re.MULTILINE | re.DOTALL,
