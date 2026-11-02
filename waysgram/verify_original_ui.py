@@ -172,7 +172,7 @@ def main() -> int:
         if custom_name in manifest_text:
             problems.append(f"custom activity remains registered: {custom_name}")
 
-    custom_ui = root / "TMessagesProj/src/main/java/app/nexusgram/ui"
+    custom_ui = root / "TMessagesProj/src/main/java/app/waysgram/ui"
     if custom_ui.exists():
         remaining = sorted(p.relative_to(root) for p in custom_ui.rglob("*.java"))
         if remaining:
