@@ -122,11 +122,11 @@ def validate_login_view_methods(original: str, current: str) -> list[str]:
         if custom_count not in (0, 1):
             problems.append(f"Unexpected custom WaysGram button count in {phone_signature}: {custom_count}")
         expected_phone, color_count = re.subn(
-            r"^[ \\t]*if \\(testBackendCheckBox != null\\) \\{\\s*"
-            r"testBackendCheckBox\\.setSquareCheckBoxColor\\([^;]+;\\s*"
-            r"testBackendCheckBox\\.updateTextColor\\(\\);\\s*"
-            r"^[ \\t]*\\}\\s*",
-            "\\n",
+            r"^[ \t]*if \(testBackendCheckBox != null\) \{\s*"
+            r"testBackendCheckBox\.setSquareCheckBoxColor\([^;]+;\s*"
+            r"testBackendCheckBox\.updateTextColor\(\);\s*"
+            r"^[ \t]*\}\s*",
+            "\n",
             expected_phone,
             count=1,
             flags=re.MULTILINE | re.DOTALL,
