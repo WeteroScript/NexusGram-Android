@@ -19,7 +19,7 @@ def patch_login(path: Path) -> bool:
     original = source
 
     source = source.replace("import app.waysgram.ui.WaysGramPortalActivity;\n", "")
-    source = source.replace("import app.nexusgram.ui.WaysGramPortalActivity;\\n", "")
+    source = source.replace("import app.nexusgram.ui.WaysGramPortalActivity;\n", "")
     source = source.replace("        private CheckBoxCell testBackendCheckBox;\n", "")
 
     if "waysGramButton" in source:
