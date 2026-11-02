@@ -9,6 +9,7 @@ on:
   push:
     paths:
       - 'waysgram.part*'
+      - 'waysgram/**'
       - '.github/workflows/android.yml'
 
 permissions:
@@ -64,7 +65,7 @@ jobs:
 
           rsync -a --exclude='.git/' Telegram-master/ ./
 
-      - name: Restore original Telegram native login UI
+      - name: Apply WaysGram integration without redesigning the native UI
         shell: bash
         run: |
           set -Eeuo pipefail
