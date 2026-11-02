@@ -702,7 +702,7 @@ def main() -> None:
     root = args.root.resolve()
     source_root = root / "TMessagesProj/src/main/java"
     mapper_source = root / "waysgram/WaysGramDataMapper.java"
-    mapper_target = source_root / "app/nexusgram/network/WaysGramDataMapper.java"
+    mapper_target = source_root / "app/waysgram/network/WaysGramDataMapper.java"
     if not mapper_source.is_file():
         raise SystemExit(f"Missing bundled REST mapper: {mapper_source}")
     mapper_target.parent.mkdir(parents=True, exist_ok=True)
