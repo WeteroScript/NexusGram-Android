@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'nexusgram.part*'
+      - 'waysgram.part*'
       - '.github/workflows/android.yml'
 
 permissions:
@@ -45,7 +45,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           shopt -s nullglob
-          parts=(nexusgram.part*)
+          parts=(waysgram.part*)
 
           if (( ${#parts[@]} != 9 )); then
             echo "::error::Expected 9 archive parts, found ${#parts[@]}"
@@ -53,8 +53,8 @@ jobs:
             exit 1
           fi
 
-          cat "${parts[@]}" > nexusgram-source.zip
-          unzip -q nexusgram-source.zip
+          cat "${parts[@]}" > waysgram-source.zip
+          unzip -q waysgram-source.zip
 
           if [[ ! -d Telegram-master ]]; then
             echo "::error::Telegram-master directory was not found"
