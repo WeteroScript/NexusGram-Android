@@ -121,8 +121,8 @@ def patch_strings(path: Path) -> bool:
 def patch_obsolete_activities(root: Path) -> int:
     source_root = root / "TMessagesProj/src/main/java"
     obsolete = {
-        "WaysGramPortalActivity": source_root / "app/nexusgram/ui/WaysGramPortalActivity.java",
-        "WaysGramHomeActivity": source_root / "app/nexusgram/ui/WaysGramHomeActivity.java",
+        "WaysGramPortalActivity": source_root / "app/waysgram/ui/WaysGramPortalActivity.java",
+        "WaysGramHomeActivity": source_root / "app/waysgram/ui/WaysGramHomeActivity.java",
     }
     existing = {name: path for name, path in obsolete.items() if path.is_file()}
     if not existing:
