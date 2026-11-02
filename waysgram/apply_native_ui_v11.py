@@ -18,7 +18,7 @@ def patch_login(path: Path) -> bool:
     source = path.read_text(encoding="utf-8")
     original = source
 
-    source = source.replace("import app.nexusgram.ui.WaysGramPortalActivity;\n", "")
+    source = source.replace("import app.waysgram.ui.WaysGramPortalActivity;\n", "")
     source = source.replace("        private CheckBoxCell testBackendCheckBox;\n", "")
 
     if "waysGramButton" in source:
@@ -82,8 +82,8 @@ def patch_manifest(path: Path) -> bool:
             raise RuntimeError(f"Unexpected number of manifest entries for {activity}: {count}")
 
     if (
-        "app.nexusgram.ui.WaysGramPortalActivity" in source
-        or "app.nexusgram.ui.WaysGramHomeActivity" in source
+        "app.waysgram.ui.WaysGramPortalActivity" in source
+        or "app.waysgram.ui.WaysGramHomeActivity" in source
     ):
         raise RuntimeError("A custom Portal/Home Activity registration remains in AndroidManifest.xml")
     if source != original:
