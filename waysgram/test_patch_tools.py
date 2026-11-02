@@ -44,6 +44,7 @@ def main() -> None:
         write(
             source / "org/telegram/ui/LoginActivity.java",
             """import app.waysgram.ui.WaysGramPortalActivity;
+import app.nexusgram.ui.WaysGramPortalActivity;
         private CheckBoxCell testBackendCheckBox;
 boolean testBackend = false;
 void createLogin(Context context) {
@@ -79,6 +80,8 @@ void createLogin(Context context) {
             """<manifest><application>
 <activity android:name="app.waysgram.ui.WaysGramPortalActivity" />
 <activity android:name="app.waysgram.ui.WaysGramHomeActivity" />
+<activity android:name="app.nexusgram.ui.WaysGramPortalActivity" />
+<activity android:name="app.nexusgram.ui.WaysGramHomeActivity" />
         <!-- usesCleartextTraffic for browser supporting opening http:// links -->
 </application></manifest>
 """,
@@ -117,6 +120,7 @@ public class ApplicationLoader {
             source / "org/telegram/ui/LoginActivity.java",
             """package org.telegram.ui;
 import app.waysgram.ui.WaysGramPortalActivity;
+import app.nexusgram.ui.WaysGramPortalActivity;
         private CheckBoxCell testBackendCheckBox;
 boolean testBackend = false;
 class LoginActivity {
@@ -284,6 +288,15 @@ class SendMessagesHelper {
             "package app.waysgram.ui; class WaysGramHomeActivity {}\n",
         )
 
+        write(
+            source / "app/nexusgram/ui/WaysGramPortalActivity.java",
+            "package app.nexusgram.ui; class WaysGramPortalActivity {}\n",
+        )
+        write(
+            source / "app/nexusgram/ui/WaysGramHomeActivity.java",
+            "package app.nexusgram.ui; class WaysGramHomeActivity {}\n",
+        )
+
         scripts = (
             ROOT / "apply_native_ui_v11.py",
             ROOT / "configure_api_client.py",
@@ -337,6 +350,8 @@ class SendMessagesHelper {
         assert "waysgramMode" in login
         assert not (source / "app/waysgram/ui/WaysGramPortalActivity.java").exists()
         assert not (source / "app/waysgram/ui/WaysGramHomeActivity.java").exists()
+        assert not (source / "app/nexusgram/ui/WaysGramPortalActivity.java").exists()
+        assert not (source / "app/nexusgram/ui/WaysGramHomeActivity.java").exists()
 
         reference = root / "Telegram-master"
         reference_ui = reference / "TMessagesProj/src/main/java/org/telegram/ui"
