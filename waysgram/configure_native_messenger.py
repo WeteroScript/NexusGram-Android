@@ -495,7 +495,8 @@ def patch_messages_controller(root: Path) -> int:
     load_messages_anchor = (
         "            final TLRPC.Chat chat = dialogId < 0 ? getChat(-dialogId): null;\n"
     )
-    load_messages_code = """            if (WaysGramApiRuntime.isWaysGramMode()) {
+    load_messages_code = """            final Timer waysGramLoaderLogger = loaderLogger;
+            if (WaysGramApiRuntime.isWaysGramMode()) {
                 if (dialogId <= 0 || mergeDialogId != 0 || mode != ChatActivity.MODE_DEFAULT
                         || threadMessageId != 0 || isTopic
                         || (load_type != 0 && load_type != 1 && load_type != 2)) {
@@ -526,7 +527,7 @@ def patch_messages_controller(root: Path) -> int:
                                     count, max_id, offset_date, classGuid, load_type, first_unread,
                                     last_message_id, unread_count, last_date, queryFromServer,
                                     mentionsCount, mode, threadMessageId, loadIndex, isTopic,
-                                    loaderLogger);
+                                    waysGramLoaderLogger);
                             return;
                         }
                         api.getUser(dialogId, new WaysGramApiClient.Callback() {
@@ -542,7 +543,7 @@ def patch_messages_controller(root: Path) -> int:
                                         count, max_id, offset_date, classGuid, load_type, first_unread,
                                         last_message_id, unread_count, last_date, queryFromServer,
                                         mentionsCount, mode, threadMessageId, loadIndex, isTopic,
-                                        loaderLogger);
+                                        waysGramLoaderLogger);
                             }
 
                             @Override
@@ -684,7 +685,7 @@ def patch_send_helper(root: Path) -> int:
                     MessagesStorage.getInstance(currentAccount).putMessages(
                             stored, false, true, false, 0, 0, 0);
                     ArrayList<MessageObject> objects = new ArrayList<>();
-                    MessageObject object = new MessageObject(currentAccount, message, null, true, true);
+                    MessageObject object = new MessageObject(currentAccount, message, true, true);
                     object.wasJustSent = true;
                     objects.add(object);
                     MessagesController.getInstance(currentAccount).updateInterfaceWithMessages(
