@@ -96,20 +96,16 @@ def patch_login(root: Path) -> int:
         match.group("indent") + "confirmedNumber = true;\n"
         + match.group("indent") + "currentDoneType = DONE_TYPE_FLOATING;\n"
         + match.group("indent") + "needShowProgress(0, false);\n"
-        + match.group("indent") + "if (activityMode != MODE_LOGIN) {\n"
-        + match.group("indent") + "    confirmedNumber = false;\n"
-        + match.group("indent") + "    needHideProgress(false);\n"
-        + match.group("indent") + "    needShowAlert(getString(R.string.AppName), \"Изменение номера телефона пока не поддерживается в WaysGram.\");\n"
+        + match.group("indent") + "if (activityMode == MODE_LOGIN) {\n"
+        + match.group("indent") + "    if (!WaysGramApiRuntime.isConfigured()) {\n"
+        + match.group("indent") + "        confirmedNumber = false;\n"
+        + match.group("indent") + "        needHideProgress(false);\n"
+        + match.group("indent") + "        needShowAlert(getString(R.string.AppName), WaysGramApiRuntime.getConfigurationError());\n"
+        + match.group("indent") + "        return;\n"
+        + match.group("indent") + "    }\n"
+        + match.group("indent") + "    requestWaysGramCode();\n"
         + match.group("indent") + "    return;\n"
         + match.group("indent") + "}\n"
-        + match.group("indent") + "if (!WaysGramApiRuntime.isConfigured()) {\n"
-        + match.group("indent") + "    confirmedNumber = false;\n"
-        + match.group("indent") + "    needHideProgress(false);\n"
-        + match.group("indent") + "    needShowAlert(getString(R.string.AppName), WaysGramApiRuntime.getConfigurationError());\n"
-        + match.group("indent") + "    return;\n"
-        + match.group("indent") + "}\n"
-        + match.group("indent") + "requestWaysGramCode();\n"
-        + match.group("indent") + "return;\n"
     )
     if "requestWaysGramCode();" not in login.read_text(encoding="utf-8"):
         changed += replace_regex_once(
@@ -265,7 +261,12 @@ def patch_login(root: Path) -> int:
         sms = sms.replace(sms_instruction_anchor, sms_instruction_new, 1)
         changed += 1
 
-    instruction_method_anchor = "        public void setParams(Bundle params, boolean restore) {\n"
+    instruction_method_anchor = (
+        "        @Override\n"
+        "        public void setParams(Bundle params, boolean restore) {\n"
+    )
+    if instruction_method_anchor not in sms:
+        instruction_method_anchor = "        public void setParams(Bundle params, boolean restore) {\n"
     instruction_method = (
         "        private String waysgramInstruction() {\n"
         "            if (currentParams != null) {\n"
@@ -495,7 +496,8 @@ def patch_messages_controller(root: Path) -> int:
     load_messages_anchor = (
         "            final TLRPC.Chat chat = dialogId < 0 ? getChat(-dialogId): null;\n"
     )
-    load_messages_code = """            if (WaysGramApiRuntime.isWaysGramMode()) {
+    load_messages_code = """            final Timer waysGramLoaderLogger = loaderLogger;
+            if (WaysGramApiRuntime.isWaysGramMode()) {
                 if (dialogId <= 0 || mergeDialogId != 0 || mode != ChatActivity.MODE_DEFAULT
                         || threadMessageId != 0 || isTopic
                         || (load_type != 0 && load_type != 1 && load_type != 2)) {
@@ -526,7 +528,7 @@ def patch_messages_controller(root: Path) -> int:
                                     count, max_id, offset_date, classGuid, load_type, first_unread,
                                     last_message_id, unread_count, last_date, queryFromServer,
                                     mentionsCount, mode, threadMessageId, loadIndex, isTopic,
-                                    loaderLogger);
+                                    waysGramLoaderLogger);
                             return;
                         }
                         api.getUser(dialogId, new WaysGramApiClient.Callback() {
@@ -542,7 +544,7 @@ def patch_messages_controller(root: Path) -> int:
                                         count, max_id, offset_date, classGuid, load_type, first_unread,
                                         last_message_id, unread_count, last_date, queryFromServer,
                                         mentionsCount, mode, threadMessageId, loadIndex, isTopic,
-                                        loaderLogger);
+                                        waysGramLoaderLogger);
                             }
 
                             @Override
@@ -684,7 +686,7 @@ def patch_send_helper(root: Path) -> int:
                     MessagesStorage.getInstance(currentAccount).putMessages(
                             stored, false, true, false, 0, 0, 0);
                     ArrayList<MessageObject> objects = new ArrayList<>();
-                    MessageObject object = new MessageObject(currentAccount, message, null, true, true);
+                    MessageObject object = new MessageObject(currentAccount, message, true, true);
                     object.wasJustSent = true;
                     objects.add(object);
                     MessagesController.getInstance(currentAccount).updateInterfaceWithMessages(
