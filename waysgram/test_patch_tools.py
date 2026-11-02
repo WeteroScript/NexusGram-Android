@@ -31,7 +31,81 @@ def run(script: Path, root: Path) -> None:
         )
 
 
+def verify_login_view_variants() -> None:
+    """Check both Telegram login snapshots: with and without the debug toggle."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "verify_original_ui", ROOT / "verify_original_ui.py"
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Could not load verify_original_ui.py")
+    verifier = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verifier)
+
+    signature = (
+        "public class PhoneView extends SlideView implements "
+        "AdapterView.OnItemSelectedListener, NotificationCenter.NotificationCenterDelegate"
+    )
+    clean_snapshot = signature + """ {
+        public PhoneView(Context context) {
+            super(context);
+        }
+        public void updateColors() {
+        }
+    }
+    """
+    clean_problems = verifier.validate_login_view_methods(clean_snapshot, clean_snapshot)
+    if clean_problems:
+        raise RuntimeError(
+            "UI verifier rejected a source snapshot without Test Backend controls: "
+            + "; ".join(clean_problems)
+        )
+
+    original_snapshot = signature + """ {
+        public PhoneView(Context context) {
+            super(context);
+            final boolean allowTestBackend = true;
+            if (allowTestBackend && activityMode == MODE_LOGIN) {
+                testBackendCheckBox = new CheckBoxCell(context, 2);
+                addView(testBackendCheckBox, LayoutHelper.createLinear(1, 1));
+                bottomMargin -= 24;
+            }
+            if (bottomMargin > 0) {
+                addView(new Space(context), LayoutHelper.createLinear(1, 1));
+            }
+        }
+        public void updateColors() {
+            if (testBackendCheckBox != null) {
+                testBackendCheckBox.setSquareCheckBoxColor(a, b, c);
+                testBackendCheckBox.updateTextColor();
+            }
+        }
+    }
+    """
+    patched_snapshot = signature + """ {
+        public PhoneView(Context context) {
+            super(context);
+            if (bottomMargin > 0) {
+                addView(new Space(context), LayoutHelper.createLinear(1, 1));
+            }
+        }
+        public void updateColors() {
+        }
+    }
+    """
+    patched_problems = verifier.validate_login_view_methods(
+        original_snapshot, patched_snapshot
+    )
+    if patched_problems:
+        raise RuntimeError(
+            "UI verifier rejected the expected removal of Test Backend controls: "
+            + "; ".join(patched_problems)
+        )
+
+
 def main() -> None:
+    verify_login_view_variants()
     with tempfile.TemporaryDirectory(prefix="waysgram-patch-test-") as temp:
         root = Path(temp)
         source = root / "TMessagesProj/src/main/java"
