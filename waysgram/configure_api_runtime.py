@@ -26,7 +26,7 @@ def main() -> None:
 
     source_root = root / "TMessagesProj/src/main/java"
     app_loader = source_root / "org/telegram/messenger/ApplicationLoader.java"
-    package_root = source_root / "app/nexusgram/network"
+    package_root = source_root / "app/waysgram/network"
     client = package_root / "WaysGramApiClient.java"
     config = package_root / "WaysGramApiConfig.java"
     runtime = package_root / "WaysGramApiRuntime.java"
