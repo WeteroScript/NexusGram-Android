@@ -276,11 +276,11 @@ class SendMessagesHelper {
         shutil.copy2(ROOT / "WaysGramDataMapper.java", waysgram / "WaysGramDataMapper.java")
 
         write(
-            source / "app/nexusgram/ui/WaysGramPortalActivity.java",
+            source / "app/waysgram/ui/WaysGramPortalActivity.java",
             "package app.waysgram.ui; class WaysGramPortalActivity {}\n",
         )
         write(
-            source / "app/nexusgram/ui/WaysGramHomeActivity.java",
+            source / "app/waysgram/ui/WaysGramHomeActivity.java",
             "package app.waysgram.ui; class WaysGramHomeActivity {}\n",
         )
 
@@ -314,10 +314,10 @@ class SendMessagesHelper {
         assert "waysgramApiBaseUrl" in gradle
         assert "WaysGramApiRuntime.initialize(applicationContext);" in app_loader
         assert "import app.waysgram.network.WaysGramApiRuntime;" in app_loader
-        assert (source / "app/nexusgram/network/WaysGramApiClient.java").is_file()
-        assert (source / "app/nexusgram/network/WaysGramApiConfig.java").is_file()
-        assert (source / "app/nexusgram/network/WaysGramApiRuntime.java").is_file()
-        assert (source / "app/nexusgram/network/WaysGramDataMapper.java").is_file()
+        assert (source / "app/waysgram/network/WaysGramApiClient.java").is_file()
+        assert (source / "app/waysgram/network/WaysGramApiConfig.java").is_file()
+        assert (source / "app/waysgram/network/WaysGramApiRuntime.java").is_file()
+        assert (source / "app/waysgram/network/WaysGramDataMapper.java").is_file()
         assert "api.requestCode(virtualPhone" in login
         assert "api.verifyCode(waysgramPhone, code" in login
         assert "onWaysGramAuthSuccess(response)" in login
@@ -335,8 +335,8 @@ class SendMessagesHelper {
         assert "WaysGramApiRuntime.isWaysGramMode()" in sender
         assert "isSignedIn()" not in sender
         assert "waysgramMode" in login
-        assert not (source / "app/nexusgram/ui/WaysGramPortalActivity.java").exists()
-        assert not (source / "app/nexusgram/ui/WaysGramHomeActivity.java").exists()
+        assert not (source / "app/waysgram/ui/WaysGramPortalActivity.java").exists()
+        assert not (source / "app/waysgram/ui/WaysGramHomeActivity.java").exists()
 
         reference = root / "Telegram-master"
         reference_ui = reference / "TMessagesProj/src/main/java/org/telegram/ui"
