@@ -21,20 +21,56 @@ def relative_files(base: Path, suffix: str | None = None) -> set[Path]:
     return files
 
 
-def validate_app_names(resource_root: Path) -> list[str]:
+def validate_string_resources(reference_root: Path, current_root: Path) -> list[str]:
     problems: list[str] = []
-    files = sorted(resource_root.glob("values*/strings.xml"))
-    if not files:
-        return [f"No locale strings.xml files found under {resource_root}"]
-    for path in files:
-        try:
-            root = ET.parse(path).getroot()
-        except ET.ParseError as error:
-            problems.append(f"Invalid XML in {path}: {error}")
+    reference_files = {
+        p.relative_to(reference_root)
+        for p in reference_root.glob("values*/strings.xml")
+    }
+    current_files = {
+        p.relative_to(current_root)
+        for p in current_root.glob("values*/strings.xml")
+    }
+    if reference_files != current_files:
+        missing = sorted(p.as_posix() for p in reference_files - current_files)
+        unexpected = sorted(p.as_posix() for p in current_files - reference_files)
+        if missing:
+            problems.append("missing locale strings resources: " + ", ".join(missing))
+        if unexpected:
+            problems.append("unexpected locale strings resources: " + ", ".join(unexpected))
+
+    debug_pattern = r"^[ \\t]*<string name=\\"DebugTestBackend\\">.*?</string>\\s*\\n?"
+    app_name_pattern = r'(<string\\s+name=\\"AppName\\">)(.*?)(</string>)'
+    for relative in sorted(reference_files & current_files):
+        original = (reference_root / relative).read_text(encoding="utf-8")
+        expected, debug_count = re.subn(
+            debug_pattern, "", original, count=1, flags=re.MULTILINE | re.DOTALL
+        )
+        if debug_count not in (0, 1):
+            problems.append(f"{relative}: unexpected DebugTestBackend count {debug_count}")
+        expected, app_name_count = re.subn(
+            app_name_pattern, r"\\1WaysGram\\3", expected, count=1, flags=re.DOTALL
+        )
+        if app_name_count != 1:
+            problems.append(f"{relative}: expected exactly one original AppName resource")
             continue
-        labels = [node.text or "" for node in root.findall("string") if node.attrib.get("name") == "AppName"]
+
+        actual_path = current_root / relative
+        actual = actual_path.read_text(encoding="utf-8")
+        if actual != expected:
+            problems.append(f"{relative}: strings changed beyond the allowed WaysGram name and removed test toggle")
+        try:
+            xml_root = ET.fromstring(actual)
+        except ET.ParseError as error:
+            problems.append(f"{relative}: invalid XML: {error}")
+            continue
+        labels = [
+            node.text or ""
+            for node in xml_root.findall("string")
+            if node.attrib.get("name") == "AppName"
+        ]
         if labels != ["WaysGram"]:
-            problems.append(f"{path}: expected one AppName=WaysGram, found {labels!r}")
+            problems.append(f"{relative}: expected one AppName=WaysGram, found {labels!r}")
     return problems
 
 
@@ -82,7 +118,10 @@ def main() -> int:
     cur_res = root / UI_RES
     ref_files = relative_files(ref_res)
     cur_files = relative_files(cur_res)
-    excluded = {p for p in (ref_files | cur_files) if p.name == "strings.xml"}
+    excluded = {
+        p for p in (ref_files | cur_files)
+        if p.name == "strings.xml" and p.parent.name.startswith("values")
+    }
     for path in sorted((ref_files | cur_files) - excluded):
         old, new = ref_res / path, cur_res / path
         if not old.is_file():
@@ -102,16 +141,31 @@ def main() -> int:
         patched_login = current_login.read_text(encoding="utf-8")
         original_add_views = len(re.findall(r"\baddView\s*\(", original_login))
         patched_add_views = len(re.findall(r"\baddView\s*\(", patched_login))
-        if patched_add_views > original_add_views:
+        removed_original_views = 0
+        if "final boolean allowTestBackend =" in original_login:
+            start = original_login.index("final boolean allowTestBackend =")
+            end = original_login.find("if (bottomMargin > 0)", start)
+            if end < 0:
+                problems.append("could not identify the removed original Test Backend row")
+            else:
+                removed_original_views += len(
+                    re.findall(r"\\baddView\\s*\\(", original_login[start:end])
+                )
+        if "waysGramButton" in original_login:
+            removed_original_views += len(
+                re.findall(r"addView\\s*\\(\\s*waysGramButton", original_login)
+            )
+        expected_add_views = original_add_views - removed_original_views
+        if patched_add_views != expected_add_views:
             problems.append(
-                f"LoginActivity added custom views: {original_add_views} original addView calls, "
-                f"{patched_add_views} after WaysGram integration"
+                f"LoginActivity view hierarchy changed: expected {expected_add_views} addView calls "
+                f"after removing only test controls, found {patched_add_views}"
             )
         for marker in ("WaysGramPortalActivity", "WaysGramHomeActivity", "waysGramButton", "testBackendCheckBox"):
             if marker in patched_login:
                 problems.append(f"custom or debug UI remains in LoginActivity: {marker}")
 
-    problems.extend(validate_app_names(cur_res))
+    problems.extend(validate_string_resources(ref_res, cur_res))
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
     manifest_text = manifest.read_text(encoding="utf-8")
     for custom_name in ("WaysGramPortalActivity", "WaysGramHomeActivity"):
