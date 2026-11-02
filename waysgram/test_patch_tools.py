@@ -426,6 +426,9 @@ class SendMessagesHelper {
         sender = (source / "org/telegram/messenger/SendMessagesHelper.java").read_text(encoding="utf-8")
         assert "api.getConversations(" in controller
         assert "finishWaysGramMessages(" in controller
+        assert controller.index("private void failWaysGramMessages(") < controller.index(
+            "public void processLoadedMessages("
+        )
         assert controller.count("WaysGramApiRuntime.isWaysGramMode()") == 2
         assert "isSignedIn()" not in controller
         assert "api.sendMessage(waysGramPeer" in sender

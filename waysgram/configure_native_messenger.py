@@ -39,6 +39,17 @@ def replace_regex_once(path: Path, pattern: str, replacement, label: str) -> boo
     return True
 
 
+def insert_before_once(path: Path, anchor: str, addition: str, label: str) -> bool:
+    source = path.read_text(encoding="utf-8")
+    if addition.strip() in source:
+        return False
+    count = source.count(anchor)
+    if count != 1:
+        raise RuntimeError(f"Expected exactly one {label} anchor in {path}; found {count}")
+    path.write_text(source.replace(anchor, addition + anchor, 1), encoding="utf-8")
+    return True
+
+
 def insert_after_regex_once(path: Path, pattern: str, addition: str, label: str) -> bool:
     source = path.read_text(encoding="utf-8")
     matches = list(re.finditer(pattern, source, flags=re.MULTILINE))
@@ -585,7 +596,7 @@ def patch_messages_controller(root: Path) -> int:
     }
 
 """
-    changed += insert_after_once(
+    changed += insert_before_once(
         path,
         helper_anchor,
         helper,
