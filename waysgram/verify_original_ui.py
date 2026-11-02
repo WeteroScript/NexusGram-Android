@@ -21,6 +21,116 @@ def relative_files(base: Path, suffix: str | None = None) -> set[Path]:
     return files
 
 
+def extract_java_block(source: str, signature: str) -> str:
+    if source.count(signature) != 1:
+        raise RuntimeError(
+            f"Expected exactly one Java UI method signature {signature!r}; "
+            f"found {source.count(signature)}"
+        )
+    start = source.index(signature)
+    opening = source.find("{", start)
+    if opening < 0:
+        raise RuntimeError(f"Missing opening brace for {signature!r}")
+
+    depth = 0
+    index = opening
+    state = "code"
+    while index < len(source):
+        char = source[index]
+        next_char = source[index + 1] if index + 1 < len(source) else ""
+        if state == "line_comment":
+            if char == "\\n":
+                state = "code"
+        elif state == "block_comment":
+            if char == "*" and next_char == "/":
+                state = "code"
+                index += 1
+        elif state in ("string", "char"):
+            if char == "\\\\":
+                index += 1
+            elif (state == "string" and char == '"') or (state == "char" and char == "'"):
+                state = "code"
+        else:
+            if char == "/" and next_char == "/":
+                state = "line_comment"
+                index += 1
+            elif char == "/" and next_char == "*":
+                state = "block_comment"
+                index += 1
+            elif char == '"':
+                state = "string"
+            elif char == "'":
+                state = "char"
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return source[start:index + 1]
+        index += 1
+    raise RuntimeError(f"Unbalanced Java braces in {signature!r}")
+
+
+def validate_login_view_methods(original: str, current: str) -> list[str]:
+    problems: list[str] = []
+    signatures = (
+        "public View createView(Context context)",
+        "public PhoneView(Context context)",
+        "public LoginActivitySmsView(Context context, @AuthType int type)",
+    )
+    blocks: dict[str, tuple[str, str]] = {}
+    for signature in signatures:
+        if signature not in original and signature not in current:
+            continue
+        try:
+            blocks[signature] = (
+                extract_java_block(original, signature),
+                extract_java_block(current, signature),
+            )
+        except RuntimeError as error:
+            problems.append(str(error))
+
+    for signature in (
+        "public View createView(Context context)",
+        "public LoginActivitySmsView(Context context, @AuthType int type)",
+    ):
+        if signature in blocks and blocks[signature][0] != blocks[signature][1]:
+            problems.append(f"Original LoginActivity layout method was modified: {signature}")
+
+    phone_signature = "public PhoneView(Context context)"
+    if phone_signature in blocks:
+        original_phone, current_phone = blocks[phone_signature]
+        expected_phone, count = re.subn(
+            r"^[ \\t]*final boolean allowTestBackend = [^\\n]*\\n.*?(?=^[ \\t]*if \\(bottomMargin > 0)",
+            "\\n",
+            original_phone,
+            count=1,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        if count not in (0, 1):
+            problems.append(f"Unexpected Test Backend block count in {phone_signature}: {count}")
+        expected_phone, custom_count = re.subn(
+            r"^[ \\t]*if \\(activityMode == MODE_LOGIN\\) \\{\\s*"
+            r"TextView waysGramButton = new TextView\\(context\\);.*?"
+            r"^[ \\t]*addView\\(waysGramButton, waysGramParams\\);\\s*"
+            r"^[ \\t]*\\}\\s*",
+            "\\n",
+            expected_phone,
+            count=1,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        if custom_count not in (0, 1):
+            problems.append(f"Unexpected custom WaysGram button count in {phone_signature}: {custom_count}")
+        for marker in ("allowTestBackend", "testBackendCheckBox", "waysGramButton"):
+            if marker in current_phone:
+                problems.append(f"Custom or debug UI remains inside {phone_signature}: {marker}")
+        if expected_phone != current_phone:
+            problems.append(
+                "PhoneView constructor differs from the original apart from removal of the Test Backend row"
+            )
+    return problems
+
+
 def validate_string_resources(reference_root: Path, current_root: Path) -> list[str]:
     problems: list[str] = []
     reference_files = {
@@ -164,6 +274,7 @@ def main() -> int:
         for marker in ("WaysGramPortalActivity", "WaysGramHomeActivity", "waysGramButton", "testBackendCheckBox"):
             if marker in patched_login:
                 problems.append(f"custom or debug UI remains in LoginActivity: {marker}")
+        problems.extend(validate_login_view_methods(original_login, patched_login))
 
     problems.extend(validate_string_resources(ref_res, cur_res))
     manifest = root / "TMessagesProj/src/main/AndroidManifest.xml"
