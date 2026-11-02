@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -83,17 +84,27 @@ def verify_login_view_variants() -> None:
         }
     }
     """
-    patched_snapshot = signature + """ {
-        public PhoneView(Context context) {
-            super(context);
-            if (bottomMargin > 0) {
-                addView(new Space(context), LayoutHelper.createLinear(1, 1));
-            }
-        }
-        public void updateColors() {
-        }
-    }
-    """
+    patched_snapshot, row_count = re.subn(
+        r"^[ \\t]*final boolean allowTestBackend = [^\\n]*\\n.*?(?=^[ \\t]*if \\(bottomMargin > 0)",
+        "\\n",
+        original_snapshot,
+        count=1,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    patched_snapshot, color_count = re.subn(
+        r"^[ \\t]*if \\(testBackendCheckBox != null) \\{\\s*"
+        r"testBackendCheckBox\\.setSquareCheckBoxColor\\([^;]+;\\s*"
+        r"testBackendCheckBox\\.updateTextColor\\(\\);\\s*"
+        r"^[ \\t]*\\}\\s*",
+        "\\n",
+        patched_snapshot,
+        count=1,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    if row_count != 1 or color_count != 1:
+        raise RuntimeError(
+            "Test fixture did not contain exactly one removable Test Backend row and color block"
+        )
     patched_problems = verifier.validate_login_view_methods(
         original_snapshot, patched_snapshot
     )
